@@ -102,13 +102,13 @@ provide('handleCategoryChange', handleCategoryChange)
 <template>
   <n-config-provider>
     <n-message-provider>
-      <div class="app-container">
+      <div class="h-100vh flex flex-col overflow-hidden">
         <MusicHeader 
           :categories="categories"
           :current-category="currentCategory"
           @change-category="handleCategoryChange"
         />
-        <n-layout class="main-content" has-sider>
+        <n-layout class="flex-1 overflow-hidden" has-sider>
           <MusicSidebar
             :playlist="playlist"
             :current-song="currentSong"
@@ -117,7 +117,7 @@ provide('handleCategoryChange', handleCategoryChange)
             @play-song="playSong"
             @change-category="handleCategoryChange"
           />
-          <n-layout-content class="content">
+          <n-layout-content class="overflow-y-auto p-6 pt-22 pb-24 scrollbar-hide">
             <router-view />
           </n-layout-content>
         </n-layout>
@@ -136,22 +136,13 @@ provide('handleCategoryChange', handleCategoryChange)
 </template>
 
 <style scoped>
-.app-container {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+/* 隐藏滚动条但保持滚动功能 */
+.scrollbar-hide {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
 }
 
-.main-content {
-  flex: 1;
-  overflow: hidden;
-}
-
-.content {
-  overflow-y: auto;
-  padding: 24px;
-  padding-top: 88px; /* 为顶部导航栏留出空间 */
-  padding-bottom: 96px; /* 为底部播放器留出空间 */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
 </style>

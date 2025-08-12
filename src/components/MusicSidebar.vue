@@ -104,10 +104,10 @@ const isSongActive = (song: Song): boolean => {
     :collapsed-width="64"
     :width="240"
     :native-scrollbar="false"
-    class="sidebar"
+    class="h-100vh bg-white border-r border-gray-200 flex flex-col"
   >
-    <div class="sidebar-content">
-      <div class="menu-section">
+    <div class="flex flex-col h-full pt-16">
+      <div class="flex-shrink-0">
         <n-menu
           :value="activeKey"
           :options="menuOptions"
@@ -117,9 +117,9 @@ const isSongActive = (song: Song): boolean => {
         />
       </div>
       
-      <div class="playlist-section">
-        <div class="playlist-header">
-          <h3>播放列表</h3>
+      <div class="flex-1 flex flex-col overflow-hidden px-4 mt-4">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="m-0 text-base text-gray-800">播放列表</h3>
           <n-select
             v-if="categories.length > 0"
             :value="currentCategory"
@@ -127,24 +127,24 @@ const isSongActive = (song: Song): boolean => {
             placeholder="选择分类"
             clearable
             size="small"
-            style="width: 120px"
+            class="w-30"
             @update:value="(val) => val && emit('change-category', val)"
           />
         </div>
         
-        <n-list class="song-list">
-          <n-list-item v-for="song in filteredPlaylist" :key="song.id" class="song-item" :class="{ 'active': isSongActive(song) }" @click="handleSongClick(song)">
+        <n-list class="flex-1 overflow-y-auto">
+          <n-list-item v-for="song in filteredPlaylist" :key="song.id" class="cursor-pointer rounded transition-colors-300 hover:bg-gray-50" :class="{ 'bg-blue-50': isSongActive(song) }" @click="handleSongClick(song)">
             <n-thing>
               <template #avatar>
-                <div class="song-cover">
-                  <img :src="song.cover" alt="Cover" />
+                <div class="w-10 h-10 rounded overflow-hidden">
+                  <img :src="song.cover" alt="Cover" class="w-full h-full object-cover" />
                 </div>
               </template>
               <template #header>
-                <div class="song-title">{{ song.title }}</div>
+                <div class="text-sm font-medium text-gray-800 truncate">{{ song.title }}</div>
               </template>
               <template #description>
-                <div class="song-artist">{{ song.artist }}</div>
+                <div class="text-xs text-gray-400 truncate">{{ song.artist }}</div>
               </template>
             </n-thing>
           </n-list-item>
@@ -155,93 +155,5 @@ const isSongActive = (song: Song): boolean => {
 </template>
 
 <style scoped>
-.sidebar {
-  height: 100vh;
-  background-color: #fff;
-  border-right: 1px solid #f0f0f0;
-  display: flex;
-  flex-direction: column;
-}
-
-.sidebar-content {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  padding-top: 64px; /* 为顶部导航栏留出空间 */
-}
-
-.menu-section {
-  flex-shrink: 0;
-}
-
-.playlist-section {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 0 16px;
-  margin-top: 16px;
-}
-
-.playlist-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.playlist-header h3 {
-  margin: 0;
-  font-size: 16px;
-  color: #333;
-}
-
-.song-list {
-  flex: 1;
-  overflow-y: auto;
-}
-
-.song-item {
-  cursor: pointer;
-  border-radius: 4px;
-  transition: background-color 0.3s;
-}
-
-.song-item:hover {
-  background-color: #f5f5f5;
-}
-
-.song-item.active {
-  background-color: #e6f7ff;
-}
-
-.song-cover {
-  width: 40px;
-  height: 40px;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.song-cover img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.song-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.song-artist {
-  font-size: 12px;
-  color: #999;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+/* UnoCSS classes are used in template, minimal custom styles if needed */
 </style>

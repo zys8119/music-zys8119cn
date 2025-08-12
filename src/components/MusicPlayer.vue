@@ -147,19 +147,19 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="music-player" v-if="currentSong">
-    <div class="player-left">
-      <div class="song-cover">
-        <img :src="currentSong.cover" alt="Cover" />
+  <div class="fixed bottom-0 left-0 right-0 h-18 bg-white border-t border-gray-200 flex items-center px-6 z-100" v-if="currentSong">
+    <div class="flex items-center w-30%">
+      <div class="w-12 h-12 rounded overflow-hidden mr-3">
+        <img :src="currentSong.cover" alt="Cover" class="w-full h-full object-cover" />
       </div>
-      <div class="song-info">
-        <div class="song-title">{{ currentSong.title }}</div>
-        <div class="song-artist">{{ currentSong.artist }}</div>
+      <div class="flex flex-col">
+        <div class="text-sm font-medium text-gray-800 mb-1">{{ currentSong.title }}</div>
+        <div class="text-xs text-gray-400">{{ currentSong.artist }}</div>
       </div>
     </div>
     
-    <div class="player-center">
-      <div class="player-controls">
+    <div class="flex-1 flex flex-col items-center">
+      <div class="flex items-center mb-2">
         <n-button quaternary circle @click="emit('play-prev')">
           <template #icon>
             <n-icon size="24">
@@ -185,18 +185,18 @@ onBeforeUnmount(() => {
         </n-button>
       </div>
       
-      <div class="player-progress">
-        <span class="time">{{ formattedCurrentTime }}</span>
+      <div class="flex items-center w-full px-4">
+        <span class="text-xs text-gray-400 w-10 text-center">{{ formattedCurrentTime }}</span>
         <n-slider
           :value="progress"
           :step="0.1"
           @update:value="handleSeek"
         />
-        <span class="time">{{ formattedDuration }}</span>
+        <span class="text-xs text-gray-400 w-10 text-center">{{ formattedDuration }}</span>
       </div>
     </div>
     
-    <div class="player-right">
+    <div class="flex items-center justify-end w-20%">
       <n-button quaternary circle @click="toggleMute">
         <template #icon>
           <n-icon size="20">
@@ -210,7 +210,7 @@ onBeforeUnmount(() => {
         :step="0.01"
         :min="0"
         :max="1"
-        style="width: 80px"
+        class="w-20"
         @update:value="(val) => emit('update:volume', val)"
       />
     </div>
@@ -218,88 +218,5 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.music-player {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 72px;
-  background-color: #fff;
-  border-top: 1px solid #f0f0f0;
-  display: flex;
-  align-items: center;
-  padding: 0 24px;
-  z-index: 100;
-}
-
-.player-left {
-  display: flex;
-  align-items: center;
-  width: 30%;
-}
-
-.song-cover {
-  width: 48px;
-  height: 48px;
-  border-radius: 4px;
-  overflow: hidden;
-  margin-right: 12px;
-}
-
-.song-cover img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.song-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.song-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
-  margin-bottom: 4px;
-}
-
-.song-artist {
-  font-size: 12px;
-  color: #999;
-}
-
-.player-center {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.player-controls {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.player-progress {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  padding: 0 16px;
-}
-
-.time {
-  font-size: 12px;
-  color: #999;
-  width: 40px;
-  text-align: center;
-}
-
-.player-right {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  width: 20%;
-}
+/* UnoCSS classes are used in template, no custom styles needed */
 </style>
