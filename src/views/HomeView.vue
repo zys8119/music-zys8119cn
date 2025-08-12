@@ -10,7 +10,18 @@ interface Artist {
   name: string
 }
 
+// 定义音乐类型
+interface Song {
+  id: string
+  title: string
+  artist: string
+  cover: string
+  duration: string
+  url?: string
+}
+
 const recommendedArtists = ref<Artist[]>([])
+const popularSongs = ref<Song[]>([])
 
 // 获取推荐歌手数据
 const fetchRecommendedArtists = async () => {
@@ -31,9 +42,90 @@ const fetchRecommendedArtists = async () => {
   }
 }
 
+// 获取网友都在听数据
+const fetchPopularSongs = async () => {
+  try {
+    const response = await fetch('http://localhost:81/music/popular-songs')
+    if (response.ok) {
+      const result = await response.json()
+      if (result.code === 200 && result.data) {
+        popularSongs.value = result.data
+        return
+      } else {
+        console.error('API returned error:', result)
+      }
+    } else {
+      console.error('Failed to fetch popular songs:', response.statusText)
+    }
+  } catch (error) {
+    console.error('Error fetching popular songs:', error)
+  }
+  
+  // 如果API调用失败，使用模拟数据
+  popularSongs.value = [
+    {
+      id: '1',
+      title: 'Bad Idea',
+      artist: 'Sharon Mills',
+      cover: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      duration: '03:13'
+    },
+    {
+      id: '2',
+      title: '遇合上的缘',
+      artist: '何雨刘政',
+      cover: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      duration: '03:54'
+    },
+    {
+      id: '3',
+      title: '面心',
+      artist: '易烊千玺-Lin',
+      cover: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      duration: '04:23'
+    },
+    {
+      id: '4',
+      title: 'J.S. Bach: Sinfonia (3-Part',
+      artist: 'Janine Jansen&Maxim',
+      cover: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      duration: '02:17'
+    },
+    {
+      id: '5',
+      title: 'Forest Fire',
+      artist: '0142',
+      cover: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      duration: '03:43'
+    },
+    {
+      id: '6',
+      title: 'In The End (DJ版本)',
+      artist: '手机加油站',
+      cover: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      duration: '02:09'
+    },
+    {
+      id: '7',
+      title: '奇迹之爱特辑',
+      artist: '周杰伦',
+      cover: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      duration: '03:22'
+    },
+    {
+      id: '8',
+      title: 'Gentleman',
+      artist: 'Psy',
+      cover: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      duration: '04:51'
+    }
+  ]
+}
+
 // 组件挂载时获取数据
 onMounted(() => {
   fetchRecommendedArtists()
+  fetchPopularSongs()
 })
 
 // 处理歌手点击
@@ -43,6 +135,15 @@ const handleArtistClick = (artist: Artist) => {
   if (artist.url) {
     // 可以根据url进行页面跳转或其他操作
     console.log('歌手链接:', artist.url)
+  }
+}
+
+// 处理歌曲点击
+const handleSongClick = (song: Song) => {
+  console.log('播放歌曲:', song.title)
+  // 这里可以添加播放歌曲的逻辑
+  if (song.url) {
+    console.log('歌曲链接:', song.url)
   }
 }
 </script>
@@ -73,6 +174,36 @@ const handleArtistClick = (artist: Artist) => {
             />
           </div>
           <span class="text-xs text-gray-700 text-center truncate w-full px-1">{{ artist.name }}</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 网友都在听 -->
+    <div class="mb-12">
+      <h2 class="text-2xl font-bold mb-6 text-gray-800">网友都在听</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div 
+          v-for="song in popularSongs" 
+          :key="song.id"
+          class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer p-3"
+          @click="handleSongClick(song)"
+        >
+          <div class="relative mb-3">
+            <img 
+              :src="song.cover" 
+              :alt="song.title"
+              class="w-full aspect-square object-cover rounded-lg"
+            />
+            <div class="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded">
+              {{ song.duration }}
+            </div>
+          </div>
+          <h3 class="font-medium text-gray-900 text-sm mb-1 truncate" :title="song.title">
+            {{ song.title }}
+          </h3>
+          <p class="text-gray-600 text-xs truncate" :title="song.artist">
+            {{ song.artist }}
+          </p>
         </div>
       </div>
     </div>
