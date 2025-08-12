@@ -32,6 +32,10 @@ const handleCategoryChange = (categoryId: number): void => {
   router.push({ name: 'category', params: { id: categoryId.toString() } })
 }
 
+const goToHome = (): void => {
+  router.push({ name: 'home' })
+}
+
 // 为每个分类定义对应的图标
 const getCategoryIcon = (categoryId: number) => {
   const iconMap: Record<number, any> = {
@@ -53,7 +57,7 @@ const getCategoryIcon = (categoryId: number) => {
         <n-icon size="24" color="#1890ff">
           <musical-notes />
         </n-icon>
-        <span class="logo-text">音乐播放器</span>
+        <span class="logo-text" @click="goToHome">音乐播放器</span>
       </div>
       <div class="search-container">
         <n-input
@@ -145,6 +149,12 @@ const getCategoryIcon = (categoryId: number) => {
   font-size: 18px;
   font-weight: 600;
   color: #333;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.logo-text:hover {
+  color: #1890ff;
 }
 
 .search-container {
