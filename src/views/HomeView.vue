@@ -12,16 +12,24 @@ interface Artist {
 
 // 定义音乐类型
 interface Song {
-  id: string
-  title: string
-  artist: string
-  cover: string
-  duration: string
-  url?: string
+  url: string
+  img: string
+  music: string
+  time: string
+  singer: string
+  playTime: string
+}
+
+// 定义歌单类型
+interface Playlist {
+  url: string
+  img: string
+  name: string
 }
 
 const recommendedArtists = ref<Artist[]>([])
 const popularSongs = ref<Song[]>([])
+const hotPlaylists = ref<Playlist[]>([])
 
 // 获取推荐歌手数据
 const fetchRecommendedArtists = async () => {
@@ -45,7 +53,7 @@ const fetchRecommendedArtists = async () => {
 // 获取网友都在听数据
 const fetchPopularSongs = async () => {
   try {
-    const response = await fetch('http://localhost:81/music/popular-songs')
+    const response = await fetch('http://localhost:81/music/netizensAreAllListening')
     if (response.ok) {
       const result = await response.json()
       if (result.code === 200 && result.data) {
@@ -64,60 +72,142 @@ const fetchPopularSongs = async () => {
   // 如果API调用失败，使用模拟数据
   popularSongs.value = [
     {
-      id: '1',
-      title: 'Bad Idea',
-      artist: 'Sharon Mills',
-      cover: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
-      duration: '03:13'
+      url: 'https://www.22a5.com/mp3/dseesdl.html',
+      img: 'https://img1.kuwo.cn/star/albumcover/300/s4s84/92/1284532959.png',
+      music: '认真的雪',
+      time: '(刚刚)',
+      singer: '薛之谦',
+      playTime: '245'
     },
     {
-      id: '2',
-      title: '遇合上的缘',
-      artist: '何雨刘政',
-      cover: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
-      duration: '03:54'
+      url: 'https://www.22a5.com/mp3/example1.html',
+      img: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      music: 'Bad Idea',
+      time: '(1分钟前)',
+      singer: 'Sharon Mills',
+      playTime: '193'
     },
     {
-      id: '3',
-      title: '面心',
-      artist: '易烊千玺-Lin',
-      cover: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
-      duration: '04:23'
+      url: 'https://www.22a5.com/mp3/example2.html',
+      img: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      music: '遇合上的缘',
+      time: '(2分钟前)',
+      singer: '何雨刘政',
+      playTime: '210'
     },
     {
-      id: '4',
-      title: 'J.S. Bach: Sinfonia (3-Part',
-      artist: 'Janine Jansen&Maxim',
-      cover: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
-      duration: '02:17'
+      url: 'https://www.22a5.com/mp3/example3.html',
+      img: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      music: '面心',
+      time: '(3分钟前)',
+      singer: '易烊千玺-Lin',
+      playTime: '180'
     },
     {
-      id: '5',
-      title: 'Forest Fire',
-      artist: '0142',
-      cover: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
-      duration: '03:43'
+      url: 'https://www.22a5.com/mp3/example4.html',
+      img: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      music: 'J.S. Bach: Sinfonia',
+      time: '(5分钟前)',
+      singer: 'Janine Jansen&Maxim',
+      playTime: '320'
     },
     {
-      id: '6',
-      title: 'In The End (DJ版本)',
-      artist: '手机加油站',
-      cover: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
-      duration: '02:09'
+      url: 'https://www.22a5.com/mp3/example5.html',
+      img: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      music: 'Forest Fire',
+      time: '(6分钟前)',
+      singer: '0142',
+      playTime: '223'
     },
     {
-      id: '7',
-      title: '奇迹之爱特辑',
-      artist: '周杰伦',
-      cover: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
-      duration: '03:22'
+      url: 'https://www.22a5.com/mp3/example6.html',
+      img: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      music: 'In The End (DJ版本)',
+      time: '(8分钟前)',
+      singer: '手机加油站',
+      playTime: '129'
     },
     {
-      id: '8',
-      title: 'Gentleman',
-      artist: 'Psy',
-      cover: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
-      duration: '04:51'
+      url: 'https://www.22a5.com/mp3/example7.html',
+      img: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      music: 'Gentleman',
+      time: '(10分钟前)',
+      singer: 'Psy',
+      playTime: '291'
+    }
+  ]
+}
+
+// 获取热门歌单数据
+const fetchHotPlaylists = async () => {
+  try {
+    const response = await fetch('http://localhost:81/music/hotPlayList')
+    if (response.ok) {
+      const result = await response.json()
+      if (result.code === 200 && result.data) {
+        hotPlaylists.value = result.data
+        return
+      } else {
+        console.error('API returned error:', result)
+      }
+    } else {
+      console.error('Failed to fetch hot playlists:', response.statusText)
+    }
+  } catch (error) {
+    console.error('Error fetching hot playlists:', error)
+  }
+  
+  // 如果API调用失败，使用模拟数据
+  hotPlaylists.value = [
+    {
+      url: 'https://www.22a5.com/playlist/gkkgsxaaec.html',
+      img: 'https://s.5bb3.com/img1.kuwo.cn/star/userpl2015/45/65/1714560958285_445571345_500.jpg?param=170y130',
+      name: '【小众女声】轻似雀羽，煦如日光'
+    },
+    {
+      url: 'https://www.22a5.com/playlist/example1.html',
+      img: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      name: '流行音乐合集'
+    },
+    {
+      url: 'https://www.22a5.com/playlist/example2.html',
+      img: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      name: '分手快乐'
+    },
+    {
+      url: 'https://www.22a5.com/playlist/example3.html',
+      img: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      name: '日语精选'
+    },
+    {
+      url: 'https://www.22a5.com/playlist/example4.html',
+      img: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      name: '南方小镇豆腐脑'
+    },
+    {
+      url: 'https://www.22a5.com/playlist/example5.html',
+      img: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      name: '通勤必备'
+    },
+    {
+      url: 'https://www.22a5.com/playlist/example6.html',
+      img: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      name: '日系复古'
+    },
+    {
+      url: 'https://www.22a5.com/playlist/example7.html',
+      img: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      name: '浪漫情歌'
+    },
+    {
+      url: 'https://www.22a5.com/playlist/example8.html',
+      img: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      name: '港台经典'
+    },
+    {
+      url: 'https://www.22a5.com/playlist/example9.html',
+      img: 'https://p1.music.126.net/BgbHf9gKc6kWQI6atvqJyQ==/109951165142435842.jpg',
+      name: '光阴诗集'
     }
   ]
 }
@@ -126,6 +216,7 @@ const fetchPopularSongs = async () => {
 onMounted(() => {
   fetchRecommendedArtists()
   fetchPopularSongs()
+  fetchHotPlaylists()
 })
 
 // 处理歌手点击
@@ -140,10 +231,24 @@ const handleArtistClick = (artist: Artist) => {
 
 // 处理歌曲点击
 const handleSongClick = (song: Song) => {
-  console.log('播放歌曲:', song.title)
+  console.log('播放歌曲:', song.music)
+  console.log('歌手:', song.singer)
+  console.log('播放时间:', song.time)
+  console.log('歌曲时长(秒):', song.playTime)
   // 这里可以添加播放歌曲的逻辑
   if (song.url) {
     console.log('歌曲链接:', song.url)
+    // 可以跳转到歌曲详情页或开始播放
+  }
+}
+
+// 处理歌单点击
+const handlePlaylistClick = (playlist: Playlist) => {
+  console.log('打开歌单:', playlist.name)
+  // 这里可以添加跳转到歌单详情页的逻辑
+  if (playlist.url) {
+    console.log('歌单链接:', playlist.url)
+    // 可以跳转到歌单详情页
   }
 }
 </script>
@@ -183,27 +288,54 @@ const handleSongClick = (song: Song) => {
       <h2 class="text-2xl font-bold mb-6 text-gray-800">网友都在听</h2>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div 
-          v-for="song in popularSongs" 
-          :key="song.id"
-          class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer p-3"
-          @click="handleSongClick(song)"
-        >
-          <div class="relative mb-3">
-            <img 
-              :src="song.cover" 
-              :alt="song.title"
-              class="w-full aspect-square object-cover rounded-lg"
-            />
-            <div class="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded">
-              {{ song.duration }}
-            </div>
+           v-for="(song, index) in popularSongs" 
+           :key="index"
+           class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer p-3"
+           @click="handleSongClick(song)"
+         >
+           <div class="relative mb-3">
+             <img 
+               :src="song.img" 
+               :alt="song.music"
+               class="w-full aspect-square object-cover rounded-lg"
+             />
+             <div class="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded">
+               {{ song.time }}
+             </div>
+           </div>
+           <h3 class="font-medium text-gray-900 text-sm mb-1 truncate" :title="song.music">
+             {{ song.music }}
+           </h3>
+           <p class="text-gray-600 text-xs truncate" :title="song.singer">
+             {{ song.singer }}
+           </p>
+         </div>
+      </div>
+    </div>
+    
+    <!-- 热门歌单 -->
+    <div class="mb-12">
+      <h2 class="text-2xl font-bold mb-6 text-gray-800">热门歌单</h2>
+      <div class="overflow-x-auto overflow-y-hidden scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
+        <div class="flex gap-4 pb-4" style="width: max-content; min-width: 100%;">
+          <div 
+            v-for="(playlist, index) in hotPlaylists.slice(0, 8)" 
+            :key="index"
+            class="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer p-3 flex-shrink-0 hover:scale-105"
+            style="width: 160px;"
+            @click="handlePlaylistClick(playlist)"
+          >
+            <div class="relative mb-3">
+               <img 
+                 :src="playlist.img" 
+                 :alt="playlist.name"
+                 class="w-full aspect-square object-cover rounded-lg"
+               />
+             </div>
+             <h3 class="font-medium text-gray-900 text-sm mb-1 truncate" :title="playlist.name">
+               {{ playlist.name }}
+             </h3>
           </div>
-          <h3 class="font-medium text-gray-900 text-sm mb-1 truncate" :title="song.title">
-            {{ song.title }}
-          </h3>
-          <p class="text-gray-600 text-xs truncate" :title="song.artist">
-            {{ song.artist }}
-          </p>
         </div>
       </div>
     </div>
