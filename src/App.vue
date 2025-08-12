@@ -108,7 +108,7 @@ provide('handleCategoryChange', handleCategoryChange)
           :current-category="currentCategory"
           @change-category="handleCategoryChange"
         />
-        <div class="main-content">
+        <n-layout class="main-content" has-sider>
           <MusicSidebar
             :playlist="playlist"
             :current-song="currentSong"
@@ -117,10 +117,10 @@ provide('handleCategoryChange', handleCategoryChange)
             @play-song="playSong"
             @change-category="handleCategoryChange"
           />
-          <div class="content">
+          <n-layout-content class="content">
             <router-view />
-          </div>
-        </div>
+          </n-layout-content>
+        </n-layout>
         <MusicPlayer
           :current-song="currentSong"
           :is-playing="isPlaying"
@@ -144,13 +144,11 @@ provide('handleCategoryChange', handleCategoryChange)
 }
 
 .main-content {
-  display: flex;
   flex: 1;
   overflow: hidden;
 }
 
 .content {
-  flex: 1;
   overflow-y: auto;
   padding: 24px;
   padding-top: 88px; /* 为顶部导航栏留出空间 */
