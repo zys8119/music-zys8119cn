@@ -28,84 +28,12 @@ const currentCategory = ref<number | null>(null)
 const playlist = ref<Song[]>([
   {
     id: 1,
-    title: '晴天',
-    artist: '周杰伦',
-    album: '叶惠美',
+    title: '天真的橡皮',
+    artist: '测试歌手',
+    album: '测试专辑',
     category: 1,
     cover: 'https://p2.music.126.net/9Y-LlcH5-OEPClZp3sacCw==/109951166361218466.jpg',
-    url: 'https://music.163.com/song/media/outer/url?id=186016.mp3'
-  },
-  {
-    id: 2,
-    title: '七里香',
-    artist: '周杰伦',
-    album: '七里香',
-    category: 1,
-    cover: 'https://p1.music.126.net/mmGgGtdktKY0nSgwa7tN_A==/109951166199683549.jpg',
-    url: 'https://music.163.com/song/media/outer/url?id=186001.mp3'
-  },
-  {
-    id: 3,
-    title: '爱在西元前',
-    artist: '周杰伦',
-    album: 'Jay',
-    category: 1,
-    cover: 'https://p2.music.126.net/sSxbRt9RpC6s_MaewyDJfA==/109951165566399390.jpg',
-    url: 'https://music.163.com/song/media/outer/url?id=185868.mp3'
-  },
-  {
-    id: 4,
-    title: 'Yellow',
-    artist: 'Coldplay',
-    album: 'Parachutes',
-    category: 2,
-    cover: 'https://p2.music.126.net/2bA9SRy3vj7MKGPbRaE57g==/109951163533012556.jpg',
-    url: 'https://music.163.com/song/media/outer/url?id=17177324.mp3'
-  },
-  {
-    id: 5,
-    title: 'The Scientist',
-    artist: 'Coldplay',
-    album: 'A Rush of Blood to the Head',
-    category: 2,
-    cover: 'https://p1.music.126.net/N_8SmJQ-tJhAdJE9PNmyDw==/109951163533011733.jpg',
-    url: 'https://music.163.com/song/media/outer/url?id=17177296.mp3'
-  },
-  {
-    id: 6,
-    title: 'Something Just Like This',
-    artist: 'The Chainsmokers / Coldplay',
-    album: 'Something Just Like This',
-    category: 3,
-    cover: 'https://p1.music.126.net/ggnyubDdMxrhpqYvpZbhEQ==/3302932937412681.jpg',
-    url: 'https://music.163.com/song/media/outer/url?id=461347998.mp3'
-  },
-  {
-    id: 7,
-    title: '夜曲',
-    artist: '周杰伦',
-    album: '十一月的萧邦',
-    category: 1,
-    cover: 'https://p1.music.126.net/8y8KJC1eCSO_vUKf2MyZwA==/109951165796899183.jpg',
-    url: 'https://music.163.com/song/media/outer/url?id=185815.mp3'
-  },
-  {
-    id: 8,
-    title: 'Fix You',
-    artist: 'Coldplay',
-    album: 'X&Y',
-    category: 2,
-    cover: 'https://p2.music.126.net/Q4Dg5QXwDL7rM_cRBPc2gw==/109951163533010585.jpg',
-    url: 'https://music.163.com/song/media/outer/url?id=3586155.mp3'
-  },
-  {
-    id: 9,
-    title: 'Viva La Vida',
-    artist: 'Coldplay',
-    album: 'Viva La Vida or Death and All His Friends',
-    category: 2,
-    cover: 'https://p2.music.126.net/2bA9SRy3vj7MKGPbRaE57g==/109951163533012556.jpg',
-    url: 'https://music.163.com/song/media/outer/url?id=3586155.mp3'
+    url: 'https://music.163.com/song/media/outer/url?id=test.mp3'
   }
 ])
 
