@@ -3,186 +3,204 @@ import MusicHeader from './components/MusicHeader.vue'
 import MusicSidebar from './components/MusicSidebar.vue'
 import MusicPlayer from './components/MusicPlayer.vue'
 
-interface Song {
-  id: number;
-  title: string;
-  artist: string;
-  album: string;
-  category: number;
-  cover: string;
-  url: string;
-}
+// 导入类型
+import type { Song, Category } from './types/index'
 
-interface Category {
-  id: number;
-  name: string;
-}
-
+// 创建路由实例
 const router = useRouter()
 const route = useRoute()
 
-// 消息将在模板中通过Provider提供
+// 响应式数据
 const currentSong = ref<Song | null>(null)
-const isPlaying = ref<boolean>(false)
-const playlist = ref<Song[]>([])
-
-// 音乐分类列表
+const isPlaying = ref(false)
+const volume = ref(0.8)
 const categories = ref<Category[]>([
-  { id: 1, name: '流行音乐' },
-  { id: 2, name: '民谣' },
-  { id: 3, name: '古典音乐' },
-  { id: 4, name: '说书' },
-  { id: 5, name: '电子音乐' }
+  { id: 1, name: '流行' },
+  { id: 2, name: '摇滚' },
+  { id: 3, name: '电子' },
+  { id: 4, name: '古典' },
+  { id: 5, name: '爵士' },
+  { id: 6, name: '民谣' }
 ])
-
-// 当前选中的分类
 const currentCategory = ref<number | null>(null)
 
-// 加载歌曲列表
-onMounted(() => {
-  // 从22a5.com网站获取的音乐资源
-  playlist.value = [
-    {
-      id: 6,
-      title: '就是南方凯《列车开往春天》[Mp3_Lrc]',
-      artist: '白水寒',
-      album: '白水寒',
-      category: 2, // 民谣
-      cover: 'https://img1.kuwo.cn/star/albumcover/300/s3s18/12/2706195026.jpg',
-      url: 'https://er-sycdn.kuwo.cn/846ab17104569ffd3a5f68c5e4f84127/689ad2e3/resource/30106/trackmedia/C200003raqZW2WHzzR.m4a?from=vip'
-    },
-    {
-      id: 7,
-      title: '白水寒《天真的橡皮》[Mp3_Lrc]',
-      artist: '白水寒',
-      album: '白水寒',
-      category: 2, // 民谣
-      cover: 'http://img4.kuwo.cn/pic_music/300/s4s76/19/3055741675.jpg',
-      url: 'https://lx-sycdn.kuwo.cn/93d3d288e00e7f430bf79a72b8cb7811/689ad24a/resource/a1/67/42/3606865785.aac?from=vip'
-    },
-    {
-      id: 8,
-      title: '第2026集 心亡，则忘',
-      artist: '小酷说书',
-      album: '小酷说书系列',
-      category: 4, // 说书
-      cover: 'https://p2.music.126.net/0-Ybpa8FrDfRgKYCTJD8Xg==/109951167206009876.jpg',
-      url: 'https://www.22a5.com/mp3/esklggxsa.html'
-    },
-    {
-      id: 9,
-      title: 'ÉVEIL',
-      artist: 'krash.',
-      album: 'ÉVEIL',
-      category: 5, // 电子音乐
-      cover: 'https://p2.music.126.net/9kZl6NRj3HxmQQ8DqTjZ4Q==/109951165625582721.jpg',
-      url: 'https://www.22a5.com/mp3/gsgkgamda.html'
-    },
-    {
-      id: 10,
-      title: '"Cerchero lontana terra" (Ernesto)',
-      artist: 'Gaetano Donizetti & Orchestra del Teatro alla Scala di Milano',
-      album: 'Classical Collection',
-      category: 3, // 古典音乐
-      cover: 'https://p1.music.126.net/WY-PtEHJOhLVQR4YGtYQKg==/109951167351825826.jpg',
-      url: 'https://www.22a5.com/mp3/sldeglcl.html'
-    },
-    {
-      id: 11,
-      title: '夜曲',
-      artist: '周杰伦',
-      album: '十一月的萧邦',
-      category: 1, // 流行音乐
-      cover: 'https://p1.music.126.net/9ajqx2JRcI0CvAVSy0AYtQ==/109951166562828988.jpg',
-      url: 'https://www.22a5.com/mp3/sample.html'
-    }
-    ]
-  })
+// 歌曲列表
+const playlist = ref<Song[]>([
+  {
+    id: 1,
+    title: '晴天',
+    artist: '周杰伦',
+    album: '叶惠美',
+    category: 1,
+    cover: 'https://p2.music.126.net/9Y-LlcH5-OEPClZp3sacCw==/109951166361218466.jpg',
+    url: 'https://music.163.com/song/media/outer/url?id=186016.mp3'
+  },
+  {
+    id: 2,
+    title: '七里香',
+    artist: '周杰伦',
+    album: '七里香',
+    category: 1,
+    cover: 'https://p1.music.126.net/mmGgGtdktKY0nSgwa7tN_A==/109951166199683549.jpg',
+    url: 'https://music.163.com/song/media/outer/url?id=186001.mp3'
+  },
+  {
+    id: 3,
+    title: '爱在西元前',
+    artist: '周杰伦',
+    album: 'Jay',
+    category: 1,
+    cover: 'https://p2.music.126.net/sSxbRt9RpC6s_MaewyDJfA==/109951165566399390.jpg',
+    url: 'https://music.163.com/song/media/outer/url?id=185868.mp3'
+  },
+  {
+    id: 4,
+    title: 'Yellow',
+    artist: 'Coldplay',
+    album: 'Parachutes',
+    category: 2,
+    cover: 'https://p2.music.126.net/2bA9SRy3vj7MKGPbRaE57g==/109951163533012556.jpg',
+    url: 'https://music.163.com/song/media/outer/url?id=17177324.mp3'
+  },
+  {
+    id: 5,
+    title: 'The Scientist',
+    artist: 'Coldplay',
+    album: 'A Rush of Blood to the Head',
+    category: 2,
+    cover: 'https://p1.music.126.net/N_8SmJQ-tJhAdJE9PNmyDw==/109951163533011733.jpg',
+    url: 'https://music.163.com/song/media/outer/url?id=17177296.mp3'
+  },
+  {
+    id: 6,
+    title: 'Something Just Like This',
+    artist: 'The Chainsmokers / Coldplay',
+    album: 'Something Just Like This',
+    category: 3,
+    cover: 'https://p1.music.126.net/ggnyubDdMxrhpqYvpZbhEQ==/3302932937412681.jpg',
+    url: 'https://music.163.com/song/media/outer/url?id=461347998.mp3'
+  },
+  {
+    id: 7,
+    title: '夜曲',
+    artist: '周杰伦',
+    album: '十一月的萧邦',
+    category: 1,
+    cover: 'https://p1.music.126.net/8y8KJC1eCSO_vUKf2MyZwA==/109951165796899183.jpg',
+    url: 'https://music.163.com/song/media/outer/url?id=185815.mp3'
+  },
+  {
+    id: 8,
+    title: 'Fix You',
+    artist: 'Coldplay',
+    album: 'X&Y',
+    category: 2,
+    cover: 'https://p2.music.126.net/Q4Dg5QXwDL7rM_cRBPc2gw==/109951163533010585.jpg',
+    url: 'https://music.163.com/song/media/outer/url?id=3586155.mp3'
+  },
+  {
+    id: 9,
+    title: 'Viva La Vida',
+    artist: 'Coldplay',
+    album: 'Viva La Vida or Death and All His Friends',
+    category: 2,
+    cover: 'https://p2.music.126.net/2bA9SRy3vj7MKGPbRaE57g==/109951163533012556.jpg',
+    url: 'https://music.163.com/song/media/outer/url?id=3586155.mp3'
+  }
+])
 
 // 播放歌曲
-const playSong = (song: Song): void => {
+function playSong(song: Song) {
   currentSong.value = song
   isPlaying.value = true
-  // 消息提示将在组件内部处理
 }
 
 // 切换播放状态
-const togglePlay = (): void => {
-  if (currentSong.value) {
-    isPlaying.value = !isPlaying.value
-  } else if (playlist.value.length > 0) {
-    playSong(playlist.value[0])
-  }
+function togglePlay() {
+  isPlaying.value = !isPlaying.value
 }
 
 // 播放下一首
-const playNext = (): void => {
-  if (!currentSong.value || playlist.value.length === 0) return
-
-  const currentIndex = playlist.value.findIndex(song => song.id === currentSong.value!.id)
-  const nextIndex = (currentIndex + 1) % playlist.value.length
-  playSong(playlist.value[nextIndex])
+function playNext() {
+  if (!currentSong.value) return
+  
+  const currentIndex = playlist.value.findIndex((song: Song) => song.id === currentSong.value?.id)
+  if (currentIndex === -1 || currentIndex === playlist.value.length - 1) {
+    // 如果是最后一首，则播放第一首
+    currentSong.value = playlist.value[0]
+  } else {
+    // 否则播放下一首
+    currentSong.value = playlist.value[currentIndex + 1]
+  }
+  
+  isPlaying.value = true
 }
 
 // 播放上一首
-const playPrev = (): void => {
-  if (!currentSong.value || playlist.value.length === 0) return
+function playPrev() {
+  if (!currentSong.value) return
   
-  const currentIndex = playlist.value.findIndex(song => song.id === currentSong.value!.id)
-  const prevIndex = (currentIndex - 1 + playlist.value.length) % playlist.value.length
-  playSong(playlist.value[prevIndex])
+  const currentIndex = playlist.value.findIndex((song: Song) => song.id === currentSong.value?.id)
+  if (currentIndex === -1 || currentIndex === 0) {
+    // 如果是第一首，则播放最后一首
+    currentSong.value = playlist.value[playlist.value.length - 1]
+  } else {
+    // 否则播放上一首
+    currentSong.value = playlist.value[currentIndex - 1]
+  }
+  
+  isPlaying.value = true
 }
 
 // 处理分类变更
-const handleCategoryChange = (categoryId: number): void => {
+function handleCategoryChange(categoryId: number) {
   currentCategory.value = categoryId
-  if (categoryId) {
-    router.push({ name: 'category', params: { id: categoryId.toString() } })
-  }
 }
 
-// 提供全局数据给路由页面组件
+// 提供全局数据
 provide('playlist', playlist)
 provide('currentSong', currentSong)
+provide('isPlaying', isPlaying)
+provide('volume', volume)
 provide('categories', categories)
 provide('currentCategory', currentCategory)
 provide('playSong', playSong)
+provide('togglePlay', togglePlay)
+provide('playNext', playNext)
+provide('playPrev', playPrev)
+provide('handleCategoryChange', handleCategoryChange)
 </script>
 
 <template>
   <n-config-provider>
     <n-message-provider>
-      <div class="music-player-container">
+      <div class="app-container">
         <MusicHeader 
           :categories="categories"
-          :currentCategory="currentCategory"
+          :current-category="currentCategory"
           @change-category="handleCategoryChange"
         />
-        <div class="music-content">
-          <MusicSidebar 
-            :playlist="playlist" 
-            :currentSong="currentSong" 
+        <div class="main-content">
+          <MusicSidebar
+            :playlist="playlist"
+            :current-song="currentSong"
             :categories="categories"
-            :currentCategory="currentCategory"
-            @play-song="playSong" 
+            :current-category="currentCategory"
+            @play-song="playSong"
             @change-category="handleCategoryChange"
           />
-          <div class="main-content">
-            <router-view 
-              :playlist="playlist" 
-              :currentSong="currentSong" 
-              :isPlaying="isPlaying"
-              :categories="categories"
-              @play-song="playSong"
-            />
+          <div class="content">
+            <router-view />
           </div>
         </div>
-        <MusicPlayer 
-          :currentSong="currentSong"
-          :isPlaying="isPlaying"
+        <MusicPlayer
+          :current-song="currentSong"
+          :is-playing="isPlaying"
+          :volume="volume"
           @toggle-play="togglePlay"
           @play-next="playNext"
           @play-prev="playPrev"
+          @update:volume="(val: number) => volume = val"
         />
       </div>
     </n-message-provider>
@@ -190,15 +208,24 @@ provide('playSong', playSong)
 </template>
 
 <style scoped>
-.music-content {
+.app-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.main-content {
   display: flex;
   flex: 1;
   overflow: hidden;
 }
 
-.main-content {
+.content {
   flex: 1;
   overflow-y: auto;
-  background-color: #f9f9f9;
+  padding: 24px;
+  padding-top: 88px; /* 为顶部导航栏留出空间 */
+  padding-bottom: 96px; /* 为底部播放器留出空间 */
 }
 </style>

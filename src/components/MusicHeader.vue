@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { h } from 'vue'
-import { Search, MusicalNotes } from '@vicons/ionicons5'
+import { 
+  Search, 
+  MusicalNotes, 
+  Home,
+  TrendingUp,
+  Flash,
+  Library,
+  Cafe,
+  Leaf
+} from '@vicons/ionicons5'
 
 interface Category {
   id: number;
@@ -18,10 +27,22 @@ const emit = defineEmits<{
   'change-category': [categoryId: number];
 }>()
 
-const handleCategoryChange = (key: string): void => {
-  const categoryId = Number(key)
+const handleCategoryChange = (categoryId: number): void => {
   emit('change-category', categoryId)
   router.push({ name: 'category', params: { id: categoryId.toString() } })
+}
+
+// 为每个分类定义对应的图标
+const getCategoryIcon = (categoryId: number) => {
+  const iconMap: Record<number, any> = {
+    1: TrendingUp, // 流行
+    2: Flash,      // 摇滚
+    3: Flash,      // 电子
+    4: Library,    // 古典
+    5: Cafe,       // 爵士
+    6: Leaf        // 民谣
+  }
+  return iconMap[categoryId] || Home
 }
 </script>
 
@@ -49,16 +70,21 @@ const handleCategoryChange = (key: string): void => {
         </n-input>
       </div>
       <div class="nav-menu">
-        <n-menu
-          v-if="categories.length > 0"
-          mode="horizontal"
-          :options="categories.map(cat => ({
-            label: cat.name,
-            key: cat.id.toString(),
-          }))"
-          :value="currentCategory ? currentCategory.toString() : undefined"
-          @update:value="handleCategoryChange"
-        />
+        <div v-if="categories.length > 0" class="nav-icons">
+          <div 
+            v-for="category in categories" 
+            :key="category.id"
+            class="nav-item"
+            :class="{ 'nav-item--active': currentCategory === category.id }"
+            @click="handleCategoryChange(category.id)"
+            :title="category.name"
+          >
+            <n-icon size="20">
+              <component :is="getCategoryIcon(category.id)" />
+            </n-icon>
+            <span class="nav-label">{{ category.name }}</span>
+          </div>
+        </div>
       </div>
       <div class="user-actions">
         <n-space>
@@ -128,6 +154,54 @@ const handleCategoryChange = (key: string): void => {
 
 .nav-menu {
   margin-right: 24px;
+}
+
+.nav-icons {
+  display: flex;
+  gap: 8px;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.nav-item:hover {
+  background-color: #f5f5f5;
+  transform: translateY(-1px);
+}
+
+.nav-item--active {
+  background-color: #e6f7ff;
+  color: #1890ff;
+}
+
+.nav-item--active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 2px;
+  background-color: #1890ff;
+  border-radius: 1px;
+}
+
+.nav-label {
+  font-size: 12px;
+  margin-top: 4px;
+  white-space: nowrap;
+}
+
+.nav-item--active .nav-label {
+  font-weight: 600;
 }
 
 .user-actions {

@@ -1,6 +1,14 @@
 <script setup lang="ts">
-import { PlayCircle, PauseCircle, PlaySkipBack, PlaySkipForward, VolumeHigh, VolumeMute } from '@vicons/ionicons5'
 import { Howl } from 'howler'
+import { NIcon } from 'naive-ui'
+import {
+  PlayCircle,
+  PauseCircle,
+  PlaySkipForward,
+  PlaySkipBack,
+  VolumeHigh,
+  VolumeMute
+} from '@vicons/ionicons5'
 
 interface Song {
   id: number;
@@ -15,146 +23,93 @@ interface Song {
 const props = defineProps<{
   currentSong: Song | null;
   isPlaying: boolean;
+  volume: number;
 }>()
 
 const emit = defineEmits<{
   'toggle-play': [];
   'play-next': [];
   'play-prev': [];
+  'update:volume': [volume: number];
 }>()
 
 const message = useMessage()
 const sound = ref<Howl | null>(null)
-const duration = ref<number>(0)
-const currentTime = ref<number>(0)
-const volume = ref<number>(80)
-const isMuted = ref<boolean>(false)
-const seekValue = ref<number>(0)
-const progressInterval = ref<number | null>(null)
+const currentTime = ref(0)
+const duration = ref(0)
+const isMuted = ref(false)
+const previousVolume = ref(props.volume)
 
-const formattedCurrentTime = computed((): string => {
-  return formatTime(currentTime.value)
+const progress = computed(() => {
+  if (duration.value === 0) return 0
+  return (currentTime.value / duration.value) * 100
 })
 
-const formattedDuration = computed((): string => {
-  return formatTime(duration.value)
-})
-
-const hasSong = computed((): boolean => {
-  return props.currentSong !== null
-})
+const formattedCurrentTime = computed(() => formatTime(currentTime.value))
+const formattedDuration = computed(() => formatTime(duration.value))
 
 function formatTime(seconds: number): string {
-  if (!seconds || isNaN(seconds)) return '0:00'
-  
   const mins = Math.floor(seconds / 60)
   const secs = Math.floor(seconds % 60)
-  return `${mins}:${secs.toString().padStart(2, '0')}`
+  return `${mins}:${secs < 10 ? '0' : ''}${secs}`
 }
 
-function updateProgress(): void {
-  if (sound.value && sound.value.playing()) {
-    currentTime.value = sound.value.seek()
-    seekValue.value = (currentTime.value / duration.value) * 100 || 0
+function updateTime() {
+  if (sound.value && props.isPlaying) {
+    currentTime.value = sound.value.seek() as number
+    requestAnimationFrame(updateTime)
   }
 }
 
-function setupProgressInterval(): void {
-  clearProgressInterval()
-  progressInterval.value = window.setInterval(() => {
-    updateProgress()
-  }, 1000)
-}
-
-function clearProgressInterval(): void {
-  if (progressInterval.value) {
-    clearInterval(progressInterval.value)
-    progressInterval.value = null
-  }
-}
-
-function handleSeek(value: number): void {
-  if (!sound.value || !duration.value) return
-  
-  const seekTime = (value / 100) * duration.value
-  sound.value.seek(seekTime)
-  currentTime.value = seekTime
-}
-
-function handleVolumeChange(value: number): void {
-  volume.value = value
+function handleSeek(value: number) {
   if (sound.value) {
-    sound.value.volume(value / 100)
-  }
-  if (value === 0) {
-    isMuted.value = true
-  } else {
-    isMuted.value = false
+    const seekTime = (value / 100) * duration.value
+    sound.value.seek(seekTime)
+    currentTime.value = seekTime
   }
 }
 
-function toggleMute(): void {
-  if (isMuted.value) {
-    // 恢复到之前的音量
-    isMuted.value = false
-    if (volume.value === 0) {
-      volume.value = 50
+function toggleMute() {
+  if (sound.value) {
+    if (isMuted.value) {
+      sound.value.volume(previousVolume.value)
+      emit('update:volume', previousVolume.value)
+    } else {
+      previousVolume.value = props.volume
+      sound.value.volume(0)
+      emit('update:volume', 0)
     }
-  } else {
-    // 静音
-    isMuted.value = true
-    volume.value = 0
+    isMuted.value = !isMuted.value
   }
-  
-  if (sound.value) {
-    sound.value.volume(volume.value / 100)
-  }
-}
-
-function togglePlay(): void {
-  emit('toggle-play')
-}
-
-function playNext(): void {
-  emit('play-next')
-}
-
-function playPrev(): void {
-  emit('play-prev')
 }
 
 watch(() => props.currentSong, (newSong) => {
+  if (sound.value) {
+    sound.value.stop()
+    sound.value.unload()
+  }
+  
   if (newSong) {
-    // 停止当前播放的音频
-    if (sound.value) {
-      sound.value.stop()
-      sound.value.unload()
-    }
-    
-    // 创建新的Howl实例
     sound.value = new Howl({
       src: [newSong.url],
       html5: true,
-      volume: volume.value / 100,
+      volume: props.volume,
       onplay: () => {
-        setupProgressInterval()
-        message.success(`正在播放: ${newSong.title}`)
-      },
-      onload: () => {
         duration.value = sound.value?.duration() || 0
+        requestAnimationFrame(updateTime)
       },
       onend: () => {
-        playNext()
+        emit('play-next')
       },
       onloaderror: () => {
-        message.error('加载音频失败，请检查网络连接')
+        message.error('加载音频失败')
       },
       onplayerror: () => {
-        message.error('播放音频失败，请尝试其他歌曲')
+        message.error('播放音频失败')
+        emit('play-next')
       }
     })
     
-    // 如果isPlaying为true，则开始播放
     if (props.isPlaying) {
       sound.value.play()
     }
@@ -165,35 +120,25 @@ watch(() => props.isPlaying, (isPlaying) => {
   if (sound.value) {
     if (isPlaying) {
       sound.value.play()
+      requestAnimationFrame(updateTime)
     } else {
       sound.value.pause()
-      clearProgressInterval()
     }
   }
 })
 
-onMounted(() => {
-  if (props.currentSong && props.isPlaying && !sound.value) {
-    sound.value = new Howl({
-      src: [props.currentSong.url],
-      html5: true,
-      volume: volume.value / 100,
-      onplay: () => {
-        setupProgressInterval()
-      },
-      onload: () => {
-        duration.value = sound.value?.duration() || 0
-      },
-      onend: () => {
-        playNext()
-      }
-    })
-    sound.value.play()
+watch(() => props.volume, (newVolume) => {
+  if (sound.value) {
+    sound.value.volume(newVolume)
+    if (newVolume > 0 && isMuted.value) {
+      isMuted.value = false
+    } else if (newVolume === 0 && !isMuted.value) {
+      isMuted.value = true
+    }
   }
 })
 
 onBeforeUnmount(() => {
-  clearProgressInterval()
   if (sound.value) {
     sound.value.stop()
     sound.value.unload()
@@ -202,72 +147,72 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="music-player" :class="{ 'has-song': hasSong }">
-    <div class="player-content">
-      <div class="song-info" v-if="currentSong">
-        <div class="song-cover">
-          <img :src="currentSong.cover" alt="Cover" />
-        </div>
-        <div class="song-details">
-          <div class="song-title">{{ currentSong.title }}</div>
-          <div class="song-artist">{{ currentSong.artist }}</div>
-        </div>
+  <div class="music-player" v-if="currentSong">
+    <div class="player-left">
+      <div class="song-cover">
+        <img :src="currentSong.cover" alt="Cover" />
       </div>
-      
+      <div class="song-info">
+        <div class="song-title">{{ currentSong.title }}</div>
+        <div class="song-artist">{{ currentSong.artist }}</div>
+      </div>
+    </div>
+    
+    <div class="player-center">
       <div class="player-controls">
-        <div class="control-buttons">
-          <n-button quaternary circle @click="playPrev">
-            <template #icon>
-              <n-icon size="24">
-                <play-skip-back />
-              </n-icon>
-            </template>
-          </n-button>
-          
-          <n-button quaternary circle class="play-button" @click="togglePlay">
-            <template #icon>
-              <n-icon size="32">
-                <component :is="isPlaying ? PauseCircle : PlayCircle" />
-              </n-icon>
-            </template>
-          </n-button>
-          
-          <n-button quaternary circle @click="playNext">
-            <template #icon>
-              <n-icon size="24">
-                <play-skip-forward />
-              </n-icon>
-            </template>
-          </n-button>
-        </div>
-        
-        <div class="progress-container">
-          <span class="time">{{ formattedCurrentTime }}</span>
-          <n-slider
-            :value="seekValue"
-            :step="0.1"
-            :disabled="!hasSong"
-            @update:value="handleSeek"
-          />
-          <span class="time">{{ formattedDuration }}</span>
-        </div>
-      </div>
-      
-      <div class="volume-controls">
-        <n-button quaternary circle @click="toggleMute">
+        <n-button quaternary circle @click="emit('play-prev')">
           <template #icon>
-            <n-icon>
-              <component :is="isMuted ? VolumeMute : VolumeHigh" />
+            <n-icon size="24">
+              <PlaySkipBack />
             </n-icon>
           </template>
         </n-button>
-        <n-slider
-          :value="volume"
-          :step="1"
-          style="width: 80px"
-          @update:value="handleVolumeChange"
-        />
+        
+        <n-button quaternary circle @click="emit('toggle-play')">
+          <template #icon>
+            <n-icon size="32">
+              <component :is="isPlaying ? PauseCircle : PlayCircle" />
+            </n-icon>
+          </template>
+        </n-button>
+        
+        <n-button quaternary circle @click="emit('play-next')">
+          <template #icon>
+            <n-icon size="24">
+              <PlaySkipForward />
+            </n-icon>
+          </template>
+        </n-button>
       </div>
+      
+      <div class="player-progress">
+        <span class="time">{{ formattedCurrentTime }}</span>
+        <n-slider
+          :value="progress"
+          :step="0.1"
+          @update:value="handleSeek"
+        />
+        <span class="time">{{ formattedDuration }}</span>
+      </div>
+    </div>
+    
+    <div class="player-right">
+      <n-button quaternary circle @click="toggleMute">
+        <template #icon>
+          <n-icon size="20">
+            <component :is="isMuted || volume === 0 ? VolumeMute : VolumeHigh" />
+          </n-icon>
+        </template>
+      </n-button>
+      
+      <n-slider
+        :value="volume"
+        :step="0.01"
+        :min="0"
+        :max="1"
+        style="width: 80px"
+        @update:value="(val) => emit('update:volume', val)"
+      />
     </div>
   </div>
 </template>
@@ -278,32 +223,24 @@ onBeforeUnmount(() => {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 80px;
+  height: 72px;
   background-color: #fff;
   border-top: 1px solid #f0f0f0;
-  z-index: 100;
   display: flex;
   align-items: center;
   padding: 0 24px;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+  z-index: 100;
 }
 
-.player-content {
+.player-left {
   display: flex;
   align-items: center;
-  width: 100%;
-  height: 100%;
-}
-
-.song-info {
-  display: flex;
-  align-items: center;
-  width: 300px;
+  width: 30%;
 }
 
 .song-cover {
-  width: 50px;
-  height: 50px;
+  width: 48px;
+  height: 48px;
   border-radius: 4px;
   overflow: hidden;
   margin-right: 12px;
@@ -315,10 +252,9 @@ onBeforeUnmount(() => {
   object-fit: cover;
 }
 
-.song-details {
+.song-info {
   display: flex;
   flex-direction: column;
-  justify-content: center;
 }
 
 .song-title {
@@ -326,44 +262,31 @@ onBeforeUnmount(() => {
   font-weight: 500;
   color: #333;
   margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 220px;
 }
 
 .song-artist {
   font-size: 12px;
   color: #999;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 220px;
 }
 
-.player-controls {
+.player-center {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
 }
 
-.control-buttons {
+.player-controls {
   display: flex;
   align-items: center;
   margin-bottom: 8px;
 }
 
-.play-button {
-  margin: 0 16px;
-}
-
-.progress-container {
+.player-progress {
   display: flex;
   align-items: center;
   width: 100%;
-  max-width: 600px;
+  padding: 0 16px;
 }
 
 .time {
@@ -373,10 +296,10 @@ onBeforeUnmount(() => {
   text-align: center;
 }
 
-.volume-controls {
+.player-right {
   display: flex;
   align-items: center;
-  width: 120px;
   justify-content: flex-end;
+  width: 20%;
 }
 </style>

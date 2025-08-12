@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { MusicalNote, Heart, Time, Albums, List } from '@vicons/ionicons5'
+import { NIcon } from 'naive-ui'
 
 interface Song {
   id: number;

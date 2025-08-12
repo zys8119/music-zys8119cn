@@ -1,5 +1,8 @@
 import type { RouteRecordRaw } from 'vue-router'
 
+// 由于使用自动导入，需要显式导入这两个函数
+import { createRouter, createWebHistory } from 'vue-router'
+
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
