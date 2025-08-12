@@ -26,15 +26,6 @@ const currentCategory = ref<number | null>(null)
 
 // 歌曲列表
 const playlist = ref<Song[]>([
-  {
-    id: 1,
-    title: '天真的橡皮',
-    artist: '测试歌手',
-    album: '测试专辑',
-    category: 1,
-    cover: 'https://p2.music.126.net/9Y-LlcH5-OEPClZp3sacCw==/109951166361218466.jpg',
-    url: 'https://music.163.com/song/media/outer/url?id=test.mp3'
-  }
 ])
 
 // 播放歌曲
@@ -51,7 +42,7 @@ function togglePlay() {
 // 播放下一首
 function playNext() {
   if (!currentSong.value) return
-  
+
   const currentIndex = playlist.value.findIndex((song: Song) => song.id === currentSong.value?.id)
   if (currentIndex === -1 || currentIndex === playlist.value.length - 1) {
     // 如果是最后一首，则播放第一首
@@ -60,14 +51,14 @@ function playNext() {
     // 否则播放下一首
     currentSong.value = playlist.value[currentIndex + 1]
   }
-  
+
   isPlaying.value = true
 }
 
 // 播放上一首
 function playPrev() {
   if (!currentSong.value) return
-  
+
   const currentIndex = playlist.value.findIndex((song: Song) => song.id === currentSong.value?.id)
   if (currentIndex === -1 || currentIndex === 0) {
     // 如果是第一首，则播放最后一首
@@ -76,7 +67,7 @@ function playPrev() {
     // 否则播放上一首
     currentSong.value = playlist.value[currentIndex - 1]
   }
-  
+
   isPlaying.value = true
 }
 
@@ -103,33 +94,17 @@ provide('handleCategoryChange', handleCategoryChange)
   <n-config-provider>
     <n-message-provider>
       <div class="h-100vh flex flex-col overflow-hidden">
-        <MusicHeader 
-          :categories="categories"
-          :current-category="currentCategory"
-          @change-category="handleCategoryChange"
-        />
+        <MusicHeader :categories="categories" :current-category="currentCategory"
+          @change-category="handleCategoryChange" />
         <n-layout class="flex-1 overflow-hidden" has-sider>
-          <MusicSidebar
-            :playlist="playlist"
-            :current-song="currentSong"
-            :categories="categories"
-            :current-category="currentCategory"
-            @play-song="playSong"
-            @change-category="handleCategoryChange"
-          />
+          <MusicSidebar :playlist="playlist" :current-song="currentSong" :categories="categories"
+            :current-category="currentCategory" @play-song="playSong" @change-category="handleCategoryChange" />
           <n-layout-content class="overflow-y-auto p-6 pt-22 pb-24 scrollbar-hide">
             <router-view />
           </n-layout-content>
         </n-layout>
-        <MusicPlayer
-          :current-song="currentSong"
-          :is-playing="isPlaying"
-          :volume="volume"
-          @toggle-play="togglePlay"
-          @play-next="playNext"
-          @play-prev="playPrev"
-          @update:volume="(val: number) => volume = val"
-        />
+        <MusicPlayer :current-song="currentSong" :is-playing="isPlaying" :volume="volume" @toggle-play="togglePlay"
+          @play-next="playNext" @play-prev="playPrev" @update:volume="(val: number) => volume = val" />
       </div>
     </n-message-provider>
   </n-config-provider>
@@ -138,11 +113,14 @@ provide('handleCategoryChange', handleCategoryChange)
 <style scoped>
 /* 隐藏滚动条但保持滚动功能 */
 .scrollbar-hide {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  display: none; /* Chrome, Safari and Opera */
+  display: none;
+  /* Chrome, Safari and Opera */
 }
 </style>
