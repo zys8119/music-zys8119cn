@@ -32,8 +32,10 @@ git add .
 commitHash=$(git log -1 --format="%h")
 git commit -m "[add] deploy $commitHash"
 git push origin main
+echo_blue 打包中...
+zip dist/dist.zip dist -r -X "*.zip"
 echo_blue 部署中...
-scp -r ./dist $serve_user@$serve_host_ip:$serve_dir
+scp ./dist/dist.zip $serve_user@$serve_host_ip:$serve_dir
 # ssh $serve_user@$serve_host_ip "cd $serve_dir && git pull"
 # echo_green 部署成功
 # echo_blue 重启服务...
