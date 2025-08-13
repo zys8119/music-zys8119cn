@@ -3,8 +3,7 @@ import axios from "axios";
 import type { AxiosRequestConfig } from "axios";
 
 // 获取API基础URL
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "https://api.zys8119.cn";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 // 创建axios实例
 const apiClient = axios.create({
