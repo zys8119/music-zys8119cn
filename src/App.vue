@@ -44,6 +44,23 @@ function playSong(song: Song) {
   isPlaying.value = true
 }
 
+// 添加歌曲到播放列表并播放
+function addSongsToPlaylist(songs: Song[]) {
+  if (songs.length === 0) return
+  
+  // 将新歌曲添加到播放列表中
+  songs.forEach(song => {
+    // 检查歌曲是否已存在于播放列表中
+    const exists = playlist.value.some(existingSong => existingSong.id === song.id)
+    if (!exists) {
+      playlist.value.push(song)
+    }
+  })
+  
+  // 播放第一首歌曲
+  playSong(songs[0])
+}
+
 // 切换播放状态
 function togglePlay() {
   isPlaying.value = !isPlaying.value
@@ -140,6 +157,7 @@ provide('currentCategory', currentCategory)
 provide('hotListCategories', hotListCategories)
 provide('showHotListDropdown', showHotListDropdown)
 provide('playSong', playSong)
+provide('addSongsToPlaylist', addSongsToPlaylist)
 provide('togglePlay', togglePlay)
 provide('playNext', playNext)
 provide('playPrev', playPrev)

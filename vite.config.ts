@@ -4,10 +4,14 @@ import AutoImport from "unplugin-auto-import/vite";
 import Components from "unplugin-vue-components/vite";
 import { NaiveUiResolver } from "unplugin-vue-components/resolvers";
 import Unocss from "unocss/vite";
+import Devtools from "vite-plugin-vue-devtools";
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
+    Devtools({
+      launchEditor: "trae",
+    }),
     Unocss(),
     vue({
       template: {

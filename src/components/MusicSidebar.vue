@@ -98,42 +98,23 @@ const isSongActive = (song: Song): boolean => {
 </script>
 
 <template>
-  <n-layout-sider
-    bordered
-    collapse-mode="width"
-    :collapsed-width="64"
-    :width="240"
-    :native-scrollbar="false"
-    class="h-100vh bg-white border-r border-gray-200 flex flex-col"
-  >
+  <n-layout-sider bordered collapse-mode="width" :collapsed-width="64" :width="240" :native-scrollbar="false"
+    class="h-100vh bg-white border-r border-gray-200 flex flex-col">
     <div class="flex flex-col h-full pt-16">
       <div class="flex-shrink-0">
-        <n-menu
-          :value="activeKey"
-          :options="menuOptions"
-          :collapsed-width="64"
-          :collapsed-icon-size="22"
-          @update:value="handleMenuClick"
-        />
+        <n-menu :value="activeKey" :options="menuOptions" :collapsed-width="64" :collapsed-icon-size="22"
+          @update:value="handleMenuClick" />
       </div>
-      
+
       <div class="flex-1 flex flex-col overflow-hidden px-4 mt-4">
         <div class="flex justify-between items-center mb-4">
           <h3 class="m-0 text-base text-gray-800">播放列表</h3>
-          <n-select
-            v-if="categories.length > 0"
-            :value="currentCategory"
-            :options="categories.map(cat => ({ label: cat.name, value: cat.id }))"
-            placeholder="选择分类"
-            clearable
-            size="small"
-            class="w-30"
-            @update:value="(val) => val && emit('change-category', val)"
-          />
         </div>
-        
+
         <n-list class="flex-1 overflow-y-auto">
-          <n-list-item v-for="song in filteredPlaylist" :key="song.id" class="cursor-pointer rounded transition-colors-300 hover:bg-gray-50" :class="{ 'bg-blue-50': isSongActive(song) }" @click="handleSongClick(song)">
+          <n-list-item v-for="song in filteredPlaylist" :key="song.id"
+            class="cursor-pointer rounded transition-colors-300 hover:bg-gray-50"
+            :class="{ 'bg-blue-50': isSongActive(song) }" @click="handleSongClick(song)">
             <n-thing>
               <template #avatar>
                 <div class="w-10 h-10 rounded overflow-hidden">
