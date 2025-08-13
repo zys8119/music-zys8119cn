@@ -66,6 +66,14 @@ onUnmounted(() => {
               <span class="text-gray-600">下一首</span>
               <n-tag size="small" type="info">→</n-tag>
             </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">切换播放模式</span>
+              <n-tag size="small" type="info">L</n-tag>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">下载歌曲</span>
+              <n-tag size="small" type="info">D</n-tag>
+            </div>
           </div>
         </div>
 

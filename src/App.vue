@@ -7,6 +7,7 @@ import { musicApi } from './services/api'
 
 // 导入类型
 import type { Song, Category } from './types/index'
+import { PlayMode } from './types/index'
 
 // 定义热门榜单分类类型
 interface HotListCategory {
@@ -24,6 +25,7 @@ const isPlaying = ref(false)
 const volume = ref(0.8)
 const currentTime = ref(0)
 const duration = ref(0)
+const playMode = ref<PlayMode>(PlayMode.SEQUENCE)
 const categories = ref<Category[]>([
   { id: 1, name: '热门榜单' },
   { id: 2, name: '新歌榜' },
@@ -105,15 +107,40 @@ function togglePlay() {
 
 // 播放下一首
 async function playNext() {
-  if (!currentSong.value) return
+  if (!currentSong.value || playlist.value.length === 0) return
 
   const currentIndex = playlist.value.findIndex((song: Song) => song.id === currentSong.value?.id)
-  if (currentIndex === -1 || currentIndex === playlist.value.length - 1) {
-    // 如果是最后一首，则播放第一首
-    await playSong(playlist.value[0])
-  } else {
-    // 否则播放下一首
-    await playSong(playlist.value[currentIndex + 1])
+  
+  switch (playMode.value) {
+    case PlayMode.SINGLE:
+      // 单曲循环：重复播放当前歌曲
+      await playSong(currentSong.value)
+      break
+      
+    case PlayMode.RANDOM:
+      // 随机播放：随机选择一首歌曲
+      const randomIndex = Math.floor(Math.random() * playlist.value.length)
+      await playSong(playlist.value[randomIndex])
+      break
+      
+    case PlayMode.LOOP:
+      // 列表循环：播放完最后一首后回到第一首
+      if (currentIndex === -1 || currentIndex === playlist.value.length - 1) {
+        await playSong(playlist.value[0])
+      } else {
+        await playSong(playlist.value[currentIndex + 1])
+      }
+      break
+      
+    case PlayMode.SEQUENCE:
+    default:
+      // 顺序播放：播放完最后一首后停止
+      if (currentIndex === -1 || currentIndex === playlist.value.length - 1) {
+        isPlaying.value = false
+      } else {
+        await playSong(playlist.value[currentIndex + 1])
+      }
+      break
   }
 }
 
@@ -146,6 +173,35 @@ function seekTo(time: number) {
 function seek(delta: number) {
   const newTime = currentTime.value + delta
   seekTo(newTime)
+}
+
+// 切换播放模式
+function togglePlayMode() {
+  const modes = [PlayMode.SEQUENCE, PlayMode.LOOP, PlayMode.SINGLE, PlayMode.RANDOM]
+  const currentIndex = modes.indexOf(playMode.value)
+  const nextIndex = (currentIndex + 1) % modes.length
+  playMode.value = modes[nextIndex]
+}
+
+// 下载歌曲
+function downloadSong() {
+  if (!currentSong.value) {
+    useMessage().warning('没有正在播放的歌曲')
+    return
+  }
+
+  const song = currentSong.value
+  const link = document.createElement('a')
+  link.href = song.url
+  link.download = `${song.artist} - ${song.title}.mp3`
+  link.target = '_blank'
+  
+  // 添加到DOM并触发点击
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  
+  useMessage().success(`开始下载：${song.title}`)
 }
 
 // 删除选中的歌曲
@@ -228,6 +284,14 @@ function handleKeydown(event: KeyboardEvent) {
         volume.value = (window as any).savedVolume || 0.8
       }
       break
+    case 'KeyL': // L键：切换播放模式
+      event.preventDefault()
+      togglePlayMode()
+      break
+    case 'KeyD': // D键：下载歌曲
+      event.preventDefault()
+      downloadSong()
+      break
     case 'Digit0':
     case 'Digit1':
     case 'Digit2':
@@ -302,6 +366,8 @@ provide('isPlaying', isPlaying)
 provide('volume', volume)
 provide('currentTime', currentTime)
 provide('duration', duration)
+provide('playMode', playMode)
+provide('togglePlayMode', togglePlayMode)
 provide('categories', categories)
 provide('currentCategory', currentCategory)
 provide('hotListCategories', hotListCategories)
@@ -319,6 +385,7 @@ provide('handleCategoryChange', handleCategoryChange)
 provide('handleHotListCategoryClick', handleHotListCategoryClick)
 provide('removeSongs', removeSongs)
 provide('clearPlaylist', clearPlaylist)
+provide('downloadSong', downloadSong)
 </script>
 
 <template>
@@ -341,7 +408,8 @@ provide('clearPlaylist', clearPlaylist)
           </n-layout-content>
         </n-layout>
         <MusicPlayer :current-song="currentSong" :is-playing="isPlaying" :volume="volume" @toggle-play="togglePlay"
-          @play-next="playNext" @play-prev="playPrev" @update:volume="(val: number) => volume = val" />
+          @play-next="playNext" @play-prev="playPrev" @update:volume="(val: number) => volume = val" 
+          @toggle-play-mode="togglePlayMode" @download-song="downloadSong" />
         <KeyboardShortcuts />
       </div>
     </n-message-provider>

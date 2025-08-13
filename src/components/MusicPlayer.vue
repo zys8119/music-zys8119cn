@@ -7,7 +7,12 @@ import {
   PlaySkipForward,
   PlaySkipBack,
   VolumeHigh,
-  VolumeMute
+  VolumeMute,
+  Repeat,
+  Shuffle,
+  PlayForward,
+  RefreshCircle,
+  Download
 } from '@vicons/ionicons5'
 
 interface Song {
@@ -31,6 +36,8 @@ const emit = defineEmits<{
   'play-next': [];
   'play-prev': [];
   'update:volume': [volume: number];
+  'toggle-play-mode': [];
+  'download-song': [];
 }>()
 
 const message = useMessage()
@@ -44,6 +51,39 @@ const previousVolume = ref(props.volume)
 const globalCurrentTime = inject('currentTime', ref(0))
 const globalDuration = inject('duration', ref(0))
 const globalSeekTo = inject('seekTo', () => {})
+const playMode = inject('playMode', ref('sequence'))
+
+// 播放模式图标映射
+const playModeIcon = computed(() => {
+  switch (playMode.value) {
+    case 'sequence':
+      return PlayForward
+    case 'loop':
+      return Repeat
+    case 'single':
+      return RefreshCircle
+    case 'random':
+      return Shuffle
+    default:
+      return PlayForward
+  }
+})
+
+// 播放模式提示文本
+const playModeText = computed(() => {
+  switch (playMode.value) {
+    case 'sequence':
+      return '顺序播放'
+    case 'loop':
+      return '列表循环'
+    case 'single':
+      return '单曲循环'
+    case 'random':
+      return '随机播放'
+    default:
+      return '顺序播放'
+  }
+})
 
 // 使用全局状态或本地状态
 const currentTime = computed(() => globalCurrentTime.value || localCurrentTime.value)
@@ -184,6 +224,14 @@ onBeforeUnmount(() => {
 
     <div class="flex-1 flex flex-col items-center">
       <div class="flex items-center mb-2">
+        <n-button quaternary circle @click="emit('toggle-play-mode')" :title="playModeText">
+          <template #icon>
+            <n-icon size="20" :class="{ 'text-blue-500': playMode !== 'sequence' }">
+              <component :is="playModeIcon" />
+            </n-icon>
+          </template>
+        </n-button>
+
         <n-button quaternary circle @click="emit('play-prev')">
           <template #icon>
             <n-icon size="24">
@@ -217,6 +265,14 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="flex items-center justify-end w-20%">
+      <n-button quaternary circle @click="emit('download-song')" :disabled="!currentSong" title="下载歌曲">
+        <template #icon>
+          <n-icon size="20">
+            <Download />
+          </n-icon>
+        </template>
+      </n-button>
+
       <n-button quaternary circle @click="toggleMute">
         <template #icon>
           <n-icon size="20">

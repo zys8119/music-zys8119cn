@@ -12,3 +12,10 @@ export interface Category {
   id: number;
   name: string;
 }
+
+export enum PlayMode {
+  SEQUENCE = 'sequence', // 顺序播放
+  LOOP = 'loop', // 列表循环
+  SINGLE = 'single', // 单曲循环
+  RANDOM = 'random' // 随机播放
+}
