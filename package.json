@@ -7,7 +7,8 @@
     "start": "pnpm dev",
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploys": "echo '====部署到服务器(备注:请在.env文件中配置serve_host_ip、serve_user、serve_dir)====' && sh ./deploy.sh"
   },
   "dependencies": {
     "@vicons/ionicons5": "^0.13.0",
