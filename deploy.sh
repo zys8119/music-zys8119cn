@@ -39,5 +39,5 @@ echo_blue zip打包中...
 zip dist/dist.zip dist -r -X "*.zip"
 echo_blue 部署中...
 scp ./dist/dist.zip $serve_user@$serve_host_ip:$serve_dir
-# cat ./serve.sh | ssh $serve_user@$serve_host_ip
+cat ./serve.sh | ssh $serve_user@$serve_host_ip
 

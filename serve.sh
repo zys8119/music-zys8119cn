@@ -1,8 +1,9 @@
 cd /project/music
 
 zip_dir=$(pwd)/dist.zip
-output_dir=$(pwd)/dist
-rm -rf $output_dir
+output_dir=$(pwd)/unzipdir
+ls | grep -Ev "^(dist.zip)" | xargs -n 1 -I {} rm -rf {}
+
 unzip -o $zip_dir -d $output_dir
 # 保存当前路径
 BASE_DIR=$(pwd)
@@ -15,10 +16,14 @@ if [ $count -eq 1 ]; then
         [ -d "$dir" ] || continue
         cd "$dir" || continue
         # 这里是你要执行的一系列命令，可以添加多条
-        mv ./* ..
-        rm -rf $dir
+        mv ./* ../..
+        
         # 返回到初始目录
         cd "$BASE_DIR"
     done;
+else
+    mv $output_dir/* .
 fi;
+rm -rf $output_dir
+rm -rf $zip_dir
 echo 'publish done'
