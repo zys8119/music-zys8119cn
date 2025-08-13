@@ -33,6 +33,7 @@ commitHash=$(git log -1 --format="%h")
 git commit -m "[add] deploy $commitHash"
 git push origin main
 echo_blue 构建中...
+rm -rf dist
 pnpm build
 echo_blue zip打包中...
 zip dist/dist.zip dist -r -X "*.zip"
