@@ -6,6 +6,12 @@ import MusicPlayer from './components/MusicPlayer.vue'
 // 导入类型
 import type { Song, Category } from './types/index'
 
+// 定义热门榜单分类类型
+interface HotListCategory {
+  url: string;
+  name: string;
+}
+
 // 创建路由实例
 const router = useRouter()
 const route = useRoute()
@@ -15,14 +21,18 @@ const currentSong = ref<Song | null>(null)
 const isPlaying = ref(false)
 const volume = ref(0.8)
 const categories = ref<Category[]>([
-  { id: 1, name: '流行' },
-  { id: 2, name: '摇滚' },
-  { id: 3, name: '电子' },
-  { id: 4, name: '古典' },
-  { id: 5, name: '爵士' },
-  { id: 6, name: '民谣' }
+  { id: 1, name: '热门榜单' },
+  { id: 2, name: '新歌榜' },
+  { id: 3, name: '排行榜' },
+  { id: 4, name: '摇滚' },
+  { id: 5, name: '电子' },
+  { id: 6, name: '古典' },
+  { id: 7, name: '爵士' },
+  { id: 8, name: '民谣' }
 ])
 const currentCategory = ref<number | null>(null)
+const hotListCategories = ref<HotListCategory[]>([])
+const showHotListDropdown = ref(false)
 
 // 歌曲列表
 const playlist = ref<Song[]>([
@@ -71,9 +81,53 @@ function playPrev() {
   isPlaying.value = true
 }
 
+// 获取热门榜单分类
+async function fetchHotListCategories() {
+  try {
+    const response = await fetch('http://localhost:81/music/hotList')
+    if (response.ok) {
+      const data = await response.json()
+      hotListCategories.value = Array.isArray(data) ? data : []
+    } else {
+      console.error('获取热门榜单分类失败:', response.statusText)
+      // 提供模拟数据作为容错
+      hotListCategories.value = [
+        { url: 'https://www.22a5.com/list/djwuqu.html', name: 'DJ舞曲大全' },
+        { url: 'https://example.com/pop', name: '流行榜单' },
+        { url: 'https://example.com/rock', name: '摇滚榜单' }
+      ]
+    }
+  } catch (error) {
+    console.error('获取热门榜单分类出错:', error)
+    // 提供模拟数据作为容错
+    hotListCategories.value = [
+      { url: 'https://www.22a5.com/list/djwuqu.html', name: 'DJ舞曲大全' },
+      { url: 'https://example.com/pop', name: '流行榜单' },
+      { url: 'https://example.com/rock', name: '摇滚榜单' }
+    ]
+  }
+}
+
 // 处理分类变更
 function handleCategoryChange(categoryId: number) {
   currentCategory.value = categoryId
+  // 如果点击的是热门榜单，获取二级分类
+  if (categoryId === 1) {
+    fetchHotListCategories()
+    showHotListDropdown.value = !showHotListDropdown.value
+  } else {
+    showHotListDropdown.value = false
+  }
+}
+
+// 处理热门榜单分类点击
+function handleHotListCategoryClick(category: HotListCategory) {
+  console.log('点击热门榜单分类:', category.name, category.url)
+  // 这里可以添加跳转到对应榜单页面的逻辑
+  if (category.url) {
+    window.open(category.url, '_blank')
+  }
+  showHotListDropdown.value = false
 }
 
 // 提供全局数据
@@ -83,19 +137,27 @@ provide('isPlaying', isPlaying)
 provide('volume', volume)
 provide('categories', categories)
 provide('currentCategory', currentCategory)
+provide('hotListCategories', hotListCategories)
+provide('showHotListDropdown', showHotListDropdown)
 provide('playSong', playSong)
 provide('togglePlay', togglePlay)
 provide('playNext', playNext)
 provide('playPrev', playPrev)
 provide('handleCategoryChange', handleCategoryChange)
+provide('handleHotListCategoryClick', handleHotListCategoryClick)
 </script>
 
 <template>
   <n-config-provider>
     <n-message-provider>
       <div class="h-100vh flex flex-col overflow-hidden">
-        <MusicHeader :categories="categories" :current-category="currentCategory"
-          @change-category="handleCategoryChange" />
+        <MusicHeader 
+          :categories="categories" 
+          :current-category="currentCategory"
+          :hot-list-categories="hotListCategories"
+          :show-hot-list-dropdown="showHotListDropdown"
+          @change-category="handleCategoryChange"
+          @hot-list-category-click="handleHotListCategoryClick" />
         <n-layout class="flex-1 overflow-hidden" has-sider>
           <MusicSidebar :playlist="playlist" :current-song="currentSong" :categories="categories"
             :current-category="currentCategory" @play-song="playSong" @change-category="handleCategoryChange" />

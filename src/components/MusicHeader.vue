@@ -16,20 +16,32 @@ interface Category {
   name: string;
 }
 
+interface HotListCategory {
+  url: string;
+  name: string;
+}
+
 const router = useRouter()
 
 const props = defineProps<{
   categories: Category[];
   currentCategory: number | null;
+  hotListCategories: HotListCategory[];
+  showHotListDropdown: boolean;
 }>()
 
 const emit = defineEmits<{
   'change-category': [categoryId: number];
+  'hot-list-category-click': [category: HotListCategory];
 }>()
 
 const handleCategoryChange = (categoryId: number): void => {
   emit('change-category', categoryId)
   router.push({ name: 'category', params: { id: categoryId.toString() } })
+}
+
+const handleHotListCategoryClick = (category: HotListCategory): void => {
+  emit('hot-list-category-click', category)
 }
 
 const goToHome = (): void => {
@@ -87,6 +99,22 @@ const getCategoryIcon = (categoryId: number) => {
               <component :is="getCategoryIcon(category.id)" />
             </n-icon>
             <span class="nav-label">{{ category.name }}</span>
+            
+            <!-- 热门榜单二级分类下拉菜单 -->
+            <div 
+              v-if="category.id === 1 && showHotListDropdown && hotListCategories.length > 0"
+              class="hot-list-dropdown"
+              @click.stop
+            >
+              <div 
+                v-for="hotCategory in hotListCategories"
+                :key="hotCategory.name"
+                class="hot-list-item"
+                @click="handleHotListCategoryClick(hotCategory)"
+              >
+                {{ hotCategory.name }}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -216,5 +244,43 @@ const getCategoryIcon = (categoryId: number) => {
 
 .user-actions {
   margin-left: 16px;
+}
+
+/* 热门榜单下拉菜单样式 */
+.hot-list-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  margin-top: 4px;
+  min-width: 120px;
+  overflow: hidden;
+}
+
+.hot-list-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 13px;
+  color: #333;
+  white-space: nowrap;
+}
+
+.hot-list-item:hover {
+  background-color: #f5f5f5;
+}
+
+.hot-list-item:active {
+  background-color: #e6f7ff;
+  color: #1890ff;
+}
+
+/* 确保热门榜单导航项有相对定位 */
+.nav-item {
+  position: relative;
 }
 </style>
