@@ -4,7 +4,9 @@ import type { AxiosRequestConfig } from "axios";
 
 // 获取API基础URL
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
-
+console.log(API_BASE_URL);
+console.log(import.meta.env.VITE_API_BASE_URL);
+console.log(import.meta.env);
 // 创建axios实例
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
