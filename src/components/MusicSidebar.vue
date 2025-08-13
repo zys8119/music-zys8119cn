@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, inject } from 'vue'
 import { MusicalNote, Heart, Time, Albums, List } from '@vicons/ionicons5'
 import { NIcon } from 'naive-ui'
 
@@ -88,8 +89,14 @@ const filteredPlaylist = computed(() => {
   return props.playlist.filter(song => song.category === props.currentCategory)
 })
 
+const globalPlaySong = inject('globalPlaySong') as ((song: Song) => void) | undefined
+
 const handleSongClick = (song: Song): void => {
-  emit('play-song', song)
+  if (globalPlaySong) {
+    globalPlaySong(song)
+  } else {
+    emit('play-song', song)
+  }
 }
 
 const isSongActive = (song: Song): boolean => {
@@ -116,11 +123,6 @@ const isSongActive = (song: Song): boolean => {
             class="cursor-pointer rounded transition-colors-300 hover:bg-gray-50"
             :class="{ 'bg-blue-50': isSongActive(song) }" @click="handleSongClick(song)">
             <n-thing>
-              <template #avatar>
-                <div class="w-10 h-10 rounded overflow-hidden">
-                  <img :src="song.cover" alt="Cover" class="w-full h-full object-cover" />
-                </div>
-              </template>
               <template #header>
                 <div class="text-sm font-medium text-gray-800 truncate">{{ song.title }}</div>
               </template>

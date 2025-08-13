@@ -38,14 +38,50 @@ const showHotListDropdown = ref(false)
 const playlist = ref<Song[]>([
 ])
 
+// 获取真实歌曲信息
+async function fetchRealSongInfo(url: string) {
+  try {
+    const response = await fetch(`http://localhost:81/music/get?url=${encodeURIComponent(url)}`)
+    if (response.ok) {
+      const result = await response.json()
+      if (result.code === 200 && result.data) {
+        return result.data
+      }
+    }
+    console.error('获取歌曲信息失败:', response.statusText)
+    return null
+  } catch (error) {
+    console.error('请求歌曲信息出错:', error)
+    return null
+  }
+}
+
 // 播放歌曲
-function playSong(song: Song) {
-  currentSong.value = song
+async function playSong(song: Song) {
+  // 如果歌曲有URL，先获取真实的歌曲信息
+  if (song.url) {
+    const realSongInfo = await fetchRealSongInfo(song.url)
+    if (realSongInfo) {
+      // 使用真实的歌曲信息更新当前歌曲
+      const updatedSong: Song = {
+        ...song,
+        title: realSongInfo.title || song.title,
+        cover: realSongInfo.pic || song.cover,
+        url: realSongInfo.url || song.url
+      }
+      currentSong.value = updatedSong
+    } else {
+      // 如果获取失败，使用原始歌曲信息
+      currentSong.value = song
+    }
+  } else {
+    currentSong.value = song
+  }
   isPlaying.value = true
 }
 
 // 添加歌曲到播放列表并播放
-function addSongsToPlaylist(songs: Song[]) {
+async function addSongsToPlaylist(songs: Song[]) {
   if (songs.length === 0) return
   
   // 将新歌曲添加到播放列表中
@@ -58,7 +94,7 @@ function addSongsToPlaylist(songs: Song[]) {
   })
   
   // 播放第一首歌曲
-  playSong(songs[0])
+  await playSong(songs[0])
 }
 
 // 切换播放状态
@@ -67,35 +103,31 @@ function togglePlay() {
 }
 
 // 播放下一首
-function playNext() {
+async function playNext() {
   if (!currentSong.value) return
 
   const currentIndex = playlist.value.findIndex((song: Song) => song.id === currentSong.value?.id)
   if (currentIndex === -1 || currentIndex === playlist.value.length - 1) {
     // 如果是最后一首，则播放第一首
-    currentSong.value = playlist.value[0]
+    await playSong(playlist.value[0])
   } else {
     // 否则播放下一首
-    currentSong.value = playlist.value[currentIndex + 1]
+    await playSong(playlist.value[currentIndex + 1])
   }
-
-  isPlaying.value = true
 }
 
 // 播放上一首
-function playPrev() {
+async function playPrev() {
   if (!currentSong.value) return
 
   const currentIndex = playlist.value.findIndex((song: Song) => song.id === currentSong.value?.id)
   if (currentIndex === -1 || currentIndex === 0) {
     // 如果是第一首，则播放最后一首
-    currentSong.value = playlist.value[playlist.value.length - 1]
+    await playSong(playlist.value[playlist.value.length - 1])
   } else {
     // 否则播放上一首
-    currentSong.value = playlist.value[currentIndex - 1]
+    await playSong(playlist.value[currentIndex - 1])
   }
-
-  isPlaying.value = true
 }
 
 // 获取热门榜单分类
@@ -157,6 +189,7 @@ provide('currentCategory', currentCategory)
 provide('hotListCategories', hotListCategories)
 provide('showHotListDropdown', showHotListDropdown)
 provide('playSong', playSong)
+provide('globalPlaySong', playSong)
 provide('addSongsToPlaylist', addSongsToPlaylist)
 provide('togglePlay', togglePlay)
 provide('playNext', playNext)

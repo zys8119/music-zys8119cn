@@ -88,7 +88,7 @@ watch(() => props.currentSong, (newSong) => {
     sound.value.stop()
     sound.value.unload()
   }
-  
+
   if (newSong) {
     sound.value = new Howl({
       src: [newSong.url],
@@ -109,7 +109,7 @@ watch(() => props.currentSong, (newSong) => {
         emit('play-next')
       }
     })
-    
+
     if (props.isPlaying) {
       sound.value.play()
     }
@@ -147,7 +147,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="fixed bottom-0 left-0 right-0 h-18 bg-white border-t border-gray-200 flex items-center px-6 z-100" v-if="currentSong">
+  <div class="fixed bottom-0 left-0 right-0 h-18 bg-white border-t border-gray-200 flex items-center px-6 z-100"
+    v-if="currentSong">
     <div class="flex items-center w-30%">
       <div class="w-12 h-12 rounded overflow-hidden mr-3">
         <img :src="currentSong.cover" alt="Cover" class="w-full h-full object-cover" />
@@ -157,7 +158,7 @@ onBeforeUnmount(() => {
         <div class="text-xs text-gray-400">{{ currentSong.artist }}</div>
       </div>
     </div>
-    
+
     <div class="flex-1 flex flex-col items-center">
       <div class="flex items-center mb-2">
         <n-button quaternary circle @click="emit('play-prev')">
@@ -167,7 +168,7 @@ onBeforeUnmount(() => {
             </n-icon>
           </template>
         </n-button>
-        
+
         <n-button quaternary circle @click="emit('toggle-play')">
           <template #icon>
             <n-icon size="32">
@@ -175,7 +176,7 @@ onBeforeUnmount(() => {
             </n-icon>
           </template>
         </n-button>
-        
+
         <n-button quaternary circle @click="emit('play-next')">
           <template #icon>
             <n-icon size="24">
@@ -184,18 +185,14 @@ onBeforeUnmount(() => {
           </template>
         </n-button>
       </div>
-      
+
       <div class="flex items-center w-full px-4">
         <span class="text-xs text-gray-400 w-10 text-center">{{ formattedCurrentTime }}</span>
-        <n-slider
-          :value="progress"
-          :step="0.1"
-          @update:value="handleSeek"
-        />
+        <n-slider :value="progress" :step="0.1" @update:value="handleSeek" />
         <span class="text-xs text-gray-400 w-10 text-center">{{ formattedDuration }}</span>
       </div>
     </div>
-    
+
     <div class="flex items-center justify-end w-20%">
       <n-button quaternary circle @click="toggleMute">
         <template #icon>
@@ -204,15 +201,9 @@ onBeforeUnmount(() => {
           </n-icon>
         </template>
       </n-button>
-      
-      <n-slider
-        :value="volume"
-        :step="0.01"
-        :min="0"
-        :max="1"
-        class="w-20"
-        @update:value="(val) => emit('update:volume', val)"
-      />
+
+      <n-slider :value="volume" :step="0.01" :min="0" :max="1" class="w-20"
+        @update:value="(val) => emit('update:volume', val)" />
     </div>
   </div>
 </template>
