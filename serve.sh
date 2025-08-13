@@ -16,7 +16,7 @@ if [ $count -eq 1 ]; then
         [ -d "$dir" ] || continue
         cd "$dir" || continue
         # 这里是你要执行的一系列命令，可以添加多条
-        mv ./* ../..
+        mv -f ./* ../..
         
         # 返回到初始目录
         cd "$BASE_DIR"
