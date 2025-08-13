@@ -35,10 +35,19 @@ const emit = defineEmits<{
 
 const message = useMessage()
 const sound = ref<Howl | null>(null)
-const currentTime = ref(0)
-const duration = ref(0)
+const localCurrentTime = ref(0)
+const localDuration = ref(0)
 const isMuted = ref(false)
 const previousVolume = ref(props.volume)
+
+// 注入全局状态
+const globalCurrentTime = inject('currentTime', ref(0))
+const globalDuration = inject('duration', ref(0))
+const globalSeekTo = inject('seekTo', () => {})
+
+// 使用全局状态或本地状态
+const currentTime = computed(() => globalCurrentTime.value || localCurrentTime.value)
+const duration = computed(() => globalDuration.value || localDuration.value)
 
 const progress = computed(() => {
   if (duration.value === 0) return 0
@@ -56,7 +65,9 @@ function formatTime(seconds: number): string {
 
 function updateTime() {
   if (sound.value && props.isPlaying) {
-    currentTime.value = sound.value.seek() as number
+    const seekTime = sound.value.seek() as number
+    localCurrentTime.value = seekTime
+    globalCurrentTime.value = seekTime
     requestAnimationFrame(updateTime)
   }
 }
@@ -65,7 +76,8 @@ function handleSeek(value: number) {
   if (sound.value) {
     const seekTime = (value / 100) * duration.value
     sound.value.seek(seekTime)
-    currentTime.value = seekTime
+    localCurrentTime.value = seekTime
+    globalCurrentTime.value = seekTime
   }
 }
 
@@ -95,7 +107,9 @@ watch(() => props.currentSong, (newSong) => {
       html5: true,
       volume: props.volume,
       onplay: () => {
-        duration.value = sound.value?.duration() || 0
+        const audioDuration = sound.value?.duration() || 0
+        localDuration.value = audioDuration
+        globalDuration.value = audioDuration
         requestAnimationFrame(updateTime)
       },
       onend: () => {
@@ -135,6 +149,15 @@ watch(() => props.volume, (newVolume) => {
     } else if (newVolume === 0 && !isMuted.value) {
       isMuted.value = true
     }
+  }
+})
+
+// 监听全局时间变化（来自键盘快捷键）
+watch(() => globalCurrentTime.value, (newTime) => {
+  if (sound.value && Math.abs(newTime - localCurrentTime.value) > 1) {
+    // 只有当时间差异较大时才进行跳转，避免正常播放时的干扰
+    sound.value.seek(newTime)
+    localCurrentTime.value = newTime
   }
 })
 

@@ -2,6 +2,7 @@
 import MusicHeader from './components/MusicHeader.vue'
 import MusicSidebar from './components/MusicSidebar.vue'
 import MusicPlayer from './components/MusicPlayer.vue'
+import KeyboardShortcuts from './components/KeyboardShortcuts.vue'
 
 // 导入类型
 import type { Song, Category } from './types/index'
@@ -20,6 +21,8 @@ const route = useRoute()
 const currentSong = ref<Song | null>(null)
 const isPlaying = ref(false)
 const volume = ref(0.8)
+const currentTime = ref(0)
+const duration = ref(0)
 const categories = ref<Category[]>([
   { id: 1, name: '热门榜单' },
   { id: 2, name: '新歌榜' },
@@ -130,6 +133,106 @@ async function playPrev() {
   }
 }
 
+// 音量控制
+function adjustVolume(delta: number) {
+  const newVolume = Math.max(0, Math.min(1, volume.value + delta))
+  volume.value = newVolume
+}
+
+// 播放进度控制
+function seekTo(time: number) {
+  currentTime.value = Math.max(0, Math.min(duration.value, time))
+}
+
+// 快进/快退
+function seek(delta: number) {
+  const newTime = currentTime.value + delta
+  seekTo(newTime)
+}
+
+// 键盘快捷键处理
+function handleKeydown(event: KeyboardEvent) {
+  // 如果用户正在输入框中输入，则不处理快捷键
+  const target = event.target as HTMLElement
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+    return
+  }
+
+  switch (event.code) {
+    case 'Space': // 空格键：播放/暂停
+      event.preventDefault()
+      togglePlay()
+      break
+    case 'ArrowLeft': // 左箭头：上一首或快退
+      event.preventDefault()
+      if (event.ctrlKey || event.metaKey) {
+        // Ctrl/Cmd + 左箭头：快退10秒
+        seek(-10)
+      } else {
+        // 左箭头：上一首
+        playPrev()
+      }
+      break
+    case 'ArrowRight': // 右箭头：下一首或快进
+      event.preventDefault()
+      if (event.ctrlKey || event.metaKey) {
+        // Ctrl/Cmd + 右箭头：快进10秒
+        seek(10)
+      } else {
+        // 右箭头：下一首
+        playNext()
+      }
+      break
+    case 'ArrowUp': // 上箭头：音量增加
+      event.preventDefault()
+      adjustVolume(0.1)
+      break
+    case 'ArrowDown': // 下箭头：音量减少
+      event.preventDefault()
+      adjustVolume(-0.1)
+      break
+    case 'KeyM': // M键：静音/取消静音
+      event.preventDefault()
+      if (volume.value > 0) {
+        // 保存当前音量并静音
+        const savedVolume = volume.value
+        volume.value = 0
+        // 将保存的音量存储到一个临时变量中
+        ;(window as any).savedVolume = savedVolume
+      } else {
+        // 恢复之前的音量
+        volume.value = (window as any).savedVolume || 0.8
+      }
+      break
+    case 'Digit0':
+    case 'Digit1':
+    case 'Digit2':
+    case 'Digit3':
+    case 'Digit4':
+    case 'Digit5':
+    case 'Digit6':
+    case 'Digit7':
+    case 'Digit8':
+    case 'Digit9':
+      // 数字键0-9：跳转到对应的播放进度百分比
+      event.preventDefault()
+      const digit = parseInt(event.code.replace('Digit', ''))
+      const targetTime = (duration.value * digit) / 10
+      seekTo(targetTime)
+      break
+  }
+}
+
+// 组件挂载时添加键盘事件监听器
+onMounted(() => {
+  document.addEventListener('keydown', handleKeydown)
+})
+
+// 组件卸载时移除键盘事件监听器
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeydown)
+})
+
 // 获取热门榜单分类
 async function fetchHotListCategories() {
   try {
@@ -184,6 +287,8 @@ provide('playlist', playlist)
 provide('currentSong', currentSong)
 provide('isPlaying', isPlaying)
 provide('volume', volume)
+provide('currentTime', currentTime)
+provide('duration', duration)
 provide('categories', categories)
 provide('currentCategory', currentCategory)
 provide('hotListCategories', hotListCategories)
@@ -194,6 +299,9 @@ provide('addSongsToPlaylist', addSongsToPlaylist)
 provide('togglePlay', togglePlay)
 provide('playNext', playNext)
 provide('playPrev', playPrev)
+provide('adjustVolume', adjustVolume)
+provide('seekTo', seekTo)
+provide('seek', seek)
 provide('handleCategoryChange', handleCategoryChange)
 provide('handleHotListCategoryClick', handleHotListCategoryClick)
 </script>
@@ -218,6 +326,7 @@ provide('handleHotListCategoryClick', handleHotListCategoryClick)
         </n-layout>
         <MusicPlayer :current-song="currentSong" :is-playing="isPlaying" :volume="volume" @toggle-play="togglePlay"
           @play-next="playNext" @play-prev="playPrev" @update:volume="(val: number) => volume = val" />
+        <KeyboardShortcuts />
       </div>
     </n-message-provider>
   </n-config-provider>
