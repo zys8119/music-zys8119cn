@@ -36,8 +36,5 @@ echo_blue 打包中...
 zip dist/dist.zip dist -r -X "*.zip"
 echo_blue 部署中...
 scp ./dist/dist.zip $serve_user@$serve_host_ip:$serve_dir
-# ssh $serve_user@$serve_host_ip "cd $serve_dir && git pull"
-# echo_green 部署成功
-# echo_blue 重启服务...
-# ssh $serve_user@$serve_host_ip "cd $serve_dir && pnpm i && docker compose up -d --force-recreate"
-# echo_green 重启服务成功
+cat ./serve.sh | ssh $serve_user@$serve_host_ip
+
