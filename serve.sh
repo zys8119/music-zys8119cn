@@ -1,7 +1,7 @@
-cd /project/music
+cd /project
 
 zip_dir=$(pwd)/dist.zip
-output_dir=$(pwd)/
+output_dir=$(pwd)/music
 rm -rf $output_dir
 unzip -o $zip_dir -d $output_dir
 # 保存当前路径
