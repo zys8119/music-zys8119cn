@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, inject } from 'vue'
-import { MusicalNote, Heart, Time, Albums, List } from '@vicons/ionicons5'
-import { NIcon } from 'naive-ui'
+import { computed, inject, ref } from 'vue'
+import { MusicalNote, Heart, Time, Albums, List, TrashOutline, CheckboxOutline } from '@vicons/ionicons5'
+import { NIcon, NButton, NCheckbox } from 'naive-ui'
 
 interface Song {
   id: number;
@@ -31,6 +31,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   'play-song': [song: Song];
   'change-category': [categoryId: number];
+  'remove-songs': [songIds: number[]];
+  'clear-playlist': [];
 }>()
 
 const menuOptions = [
@@ -102,6 +104,73 @@ const handleSongClick = (song: Song): void => {
 const isSongActive = (song: Song): boolean => {
   return props.currentSong?.id === song.id
 }
+
+// 选择状态管理
+const selectedSongs = ref<Set<number>>(new Set())
+
+// 全选状态
+const isAllSelected = computed(() => {
+  return filteredPlaylist.value.length > 0 && 
+         filteredPlaylist.value.every(song => selectedSongs.value.has(song.id))
+})
+
+const isIndeterminate = computed(() => {
+  const selectedCount = filteredPlaylist.value.filter(song => selectedSongs.value.has(song.id)).length
+  return selectedCount > 0 && selectedCount < filteredPlaylist.value.length
+})
+
+
+
+// 全选/取消全选
+const toggleSelectAll = () => {
+  if (isAllSelected.value) {
+    selectedSongs.value.clear()
+  } else {
+    filteredPlaylist.value.forEach(song => {
+      selectedSongs.value.add(song.id)
+    })
+  }
+}
+
+// 切换单个歌曲选择状态
+const toggleSongSelection = (songId: number, event: Event) => {
+  event.stopPropagation()
+  if (selectedSongs.value.has(songId)) {
+    selectedSongs.value.delete(songId)
+  } else {
+    selectedSongs.value.add(songId)
+  }
+}
+
+// 删除选中的歌曲
+const removeSelectedSongs = () => {
+  if (selectedSongs.value.size > 0) {
+    emit('remove-songs', Array.from(selectedSongs.value))
+    selectedSongs.value.clear()
+  }
+}
+
+// 删除单个歌曲
+const removeSingleSong = (songId: number, event: Event) => {
+  event.stopPropagation()
+  emit('remove-songs', [songId])
+}
+
+// 清空播放列表
+const clearPlaylist = () => {
+  emit('clear-playlist')
+  selectedSongs.value.clear()
+}
+
+// 处理歌曲点击
+const handleSongItemClick = (song: Song, event: Event) => {
+  // 如果点击的是复选框区域，不播放歌曲
+  const target = event.target as HTMLElement
+  if (target.closest('.n-checkbox') || target.closest('[data-checkbox]')) {
+    return
+  }
+  handleSongClick(song)
+}
 </script>
 
 <template>
@@ -116,13 +185,69 @@ const isSongActive = (song: Song): boolean => {
       <div class="flex-1 flex flex-col overflow-hidden px-4 mt-4">
         <div class="flex justify-between items-center mb-4">
           <h3 class="m-0 text-base text-gray-800">播放列表</h3>
+          <n-button
+            size="small"
+            type="error"
+            @click="clearPlaylist"
+            :disabled="filteredPlaylist.length === 0"
+          >
+            <template #icon>
+              <n-icon><TrashOutline /></n-icon>
+            </template>
+            清空
+          </n-button>
+        </div>
+
+        <!-- 批量操作栏 -->
+        <div v-if="selectedSongs.size > 0" class="flex justify-between items-center mb-3 p-2 bg-gray-50 rounded">
+          <div class="flex items-center gap-2">
+            <n-checkbox
+              :checked="isAllSelected"
+              :indeterminate="isIndeterminate"
+              @update:checked="toggleSelectAll"
+            >
+              全选 ({{ selectedSongs.size }}/{{ filteredPlaylist.length }})
+            </n-checkbox>
+          </div>
+          <n-button
+            size="small"
+            type="error"
+            @click="removeSelectedSongs"
+          >
+            <template #icon>
+              <n-icon><TrashOutline /></n-icon>
+            </template>
+            删除选中
+          </n-button>
+        </div>
+        
+        <!-- 全选操作 -->
+        <div v-else-if="filteredPlaylist.length > 0" class="flex items-center mb-3">
+          <n-checkbox
+            :checked="isAllSelected"
+            :indeterminate="isIndeterminate"
+            @update:checked="toggleSelectAll"
+          >
+            全选
+          </n-checkbox>
         </div>
 
         <n-list class="flex-1 overflow-y-auto">
           <n-list-item v-for="song in filteredPlaylist" :key="song.id"
-            class="cursor-pointer rounded transition-colors-300 hover:bg-gray-50"
-            :class="{ 'bg-blue-50': isSongActive(song) }" @click="handleSongClick(song)">
-            <n-thing>
+            class="cursor-pointer rounded transition-colors-300 hover:bg-gray-50 group"
+            :class="{ 
+              'bg-blue-50': isSongActive(song),
+              'bg-red-50': selectedSongs.has(song.id)
+            }" 
+            @click="handleSongItemClick(song, $event)">
+            <template #prefix>
+              <n-checkbox
+                :checked="selectedSongs.has(song.id)"
+                @click.stop="toggleSongSelection(song.id, $event)"
+                data-checkbox
+              />
+            </template>
+            <n-thing class="flex-1">
               <template #header>
                 <div class="text-sm font-medium text-gray-800 truncate">{{ song.title }}</div>
               </template>
@@ -130,6 +255,19 @@ const isSongActive = (song: Song): boolean => {
                 <div class="text-xs text-gray-400 truncate">{{ song.artist }}</div>
               </template>
             </n-thing>
+            <template #suffix>
+              <n-button
+                size="small"
+                type="error"
+                quaternary
+                class="opacity-0 group-hover:opacity-100 transition-opacity"
+                @click="removeSingleSong(song.id, $event)"
+              >
+                <template #icon>
+                  <n-icon><TrashOutline /></n-icon>
+                </template>
+              </n-button>
+            </template>
           </n-list-item>
         </n-list>
       </div>

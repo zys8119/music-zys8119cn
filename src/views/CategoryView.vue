@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch, inject } from 'vue'
 import { useRoute } from 'vue-router'
 import { NList, NListItem, NThing, NTag, NEmpty, NCard, NGrid, NGridItem, NCheckbox, NButton, NSpace } from 'naive-ui'
+import { musicApi } from '../services/api'
 
 interface Song {
   id: number;
@@ -90,26 +91,19 @@ const fetchHotListCategories = async () => {
 
   isLoadingCategories.value = true
   try {
-    const response = await fetch('http://localhost:81/music/hotList')
-    if (response.ok) {
-      const data = await response.json()
-      if (Array.isArray(data.data) && data.data.length > 0) {
-        hotListCategories.value = data.data
-        // 设置默认选中第一个分类并自动请求歌曲数据
-        if (hotListCategories.value.length > 0 && !selectedCategory.value) {
-          const firstCategory = hotListCategories.value[0]
-          selectedCategory.value = firstCategory.name
-          // 自动请求第一个分类的歌曲数据
-          if (firstCategory.url) {
-            fetchHotListSongs(firstCategory.url)
-          }
+    const data = await musicApi.getHotList()
+    if (Array.isArray(data.data) && data.data.length > 0) {
+      hotListCategories.value = data.data
+      // 设置默认选中第一个分类并自动请求歌曲数据
+      if (hotListCategories.value.length > 0 && !selectedCategory.value) {
+        const firstCategory = hotListCategories.value[0]
+        selectedCategory.value = firstCategory.name
+        // 自动请求第一个分类的歌曲数据
+        if (firstCategory.url) {
+          fetchHotListSongs(firstCategory.url)
         }
-      } else {
-        hotListCategories.value = []
-        selectedCategory.value = null
       }
     } else {
-      console.error('获取热门榜单分类失败:', response.statusText)
       hotListCategories.value = []
       selectedCategory.value = null
     }
@@ -125,16 +119,10 @@ const fetchHotListCategories = async () => {
 const fetchHotListSongs = async (url: string) => {
   isLoadingSongs.value = true
   try {
-    const response = await fetch(`http://localhost:81/music/getHotPlayList?url=${encodeURIComponent(url)}`)
-    if (response.ok) {
-      const data = await response.json()
-      if (Array.isArray(data.data) && data.data.length > 0) {
-        hotListSongs.value = data.data
-      } else {
-        hotListSongs.value = []
-      }
+    const data = await musicApi.getHotPlayListByUrl(url)
+    if (Array.isArray(data.data) && data.data.length > 0) {
+      hotListSongs.value = data.data
     } else {
-      console.error('获取热门榜单歌曲失败:', response.statusText)
       hotListSongs.value = []
     }
   } catch (error) {

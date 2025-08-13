@@ -3,6 +3,7 @@ import MusicHeader from './components/MusicHeader.vue'
 import MusicSidebar from './components/MusicSidebar.vue'
 import MusicPlayer from './components/MusicPlayer.vue'
 import KeyboardShortcuts from './components/KeyboardShortcuts.vue'
+import { musicApi } from './services/api'
 
 // 导入类型
 import type { Song, Category } from './types/index'
@@ -44,14 +45,11 @@ const playlist = ref<Song[]>([
 // 获取真实歌曲信息
 async function fetchRealSongInfo(url: string) {
   try {
-    const response = await fetch(`http://localhost:81/music/get?url=${encodeURIComponent(url)}`)
-    if (response.ok) {
-      const result = await response.json()
-      if (result.code === 200 && result.data) {
-        return result.data
-      }
+    const result = await musicApi.getSongInfo(url)
+    if (result.code === 200 && result.data) {
+      return result.data
     }
-    console.error('获取歌曲信息失败:', response.statusText)
+    console.error('获取歌曲信息失败:', result)
     return null
   } catch (error) {
     console.error('请求歌曲信息出错:', error)
@@ -150,6 +148,32 @@ function seek(delta: number) {
   seekTo(newTime)
 }
 
+// 删除选中的歌曲
+function removeSongs(songIds: number[]) {
+  // 检查当前播放的歌曲是否在删除列表中
+  const isCurrentSongDeleted = currentSong.value && songIds.includes(currentSong.value.id)
+  
+  // 从播放列表中移除选中的歌曲
+  playlist.value = playlist.value.filter(song => !songIds.includes(song.id))
+  
+  // 如果当前播放的歌曲被删除，停止播放并清空当前歌曲
+  if (isCurrentSongDeleted) {
+    isPlaying.value = false
+    currentSong.value = null
+    currentTime.value = 0
+    duration.value = 0
+  }
+}
+
+// 清空播放列表
+function clearPlaylist() {
+  playlist.value = []
+  isPlaying.value = false
+  currentSong.value = null
+  currentTime.value = 0
+  duration.value = 0
+}
+
 // 键盘快捷键处理
 function handleKeydown(event: KeyboardEvent) {
   // 如果用户正在输入框中输入，则不处理快捷键
@@ -236,19 +260,8 @@ onUnmounted(() => {
 // 获取热门榜单分类
 async function fetchHotListCategories() {
   try {
-    const response = await fetch('http://localhost:81/music/hotList')
-    if (response.ok) {
-      const data = await response.json()
-      hotListCategories.value = Array.isArray(data) ? data : []
-    } else {
-      console.error('获取热门榜单分类失败:', response.statusText)
-      // 提供模拟数据作为容错
-      hotListCategories.value = [
-        { url: 'https://www.22a5.com/list/djwuqu.html', name: 'DJ舞曲大全' },
-        { url: 'https://example.com/pop', name: '流行榜单' },
-        { url: 'https://example.com/rock', name: '摇滚榜单' }
-      ]
-    }
+    const data = await musicApi.getHotList()
+    hotListCategories.value = Array.isArray(data) ? data : []
   } catch (error) {
     console.error('获取热门榜单分类出错:', error)
     // 提供模拟数据作为容错
@@ -304,6 +317,8 @@ provide('seekTo', seekTo)
 provide('seek', seek)
 provide('handleCategoryChange', handleCategoryChange)
 provide('handleHotListCategoryClick', handleHotListCategoryClick)
+provide('removeSongs', removeSongs)
+provide('clearPlaylist', clearPlaylist)
 </script>
 
 <template>
@@ -319,7 +334,8 @@ provide('handleHotListCategoryClick', handleHotListCategoryClick)
           @hot-list-category-click="handleHotListCategoryClick" />
         <n-layout class="flex-1 overflow-hidden" has-sider>
           <MusicSidebar :playlist="playlist" :current-song="currentSong" :categories="categories"
-            :current-category="currentCategory" @play-song="playSong" @change-category="handleCategoryChange" />
+            :current-category="currentCategory" @play-song="playSong" @change-category="handleCategoryChange" 
+            @remove-songs="removeSongs" @clear-playlist="clearPlaylist" />
           <n-layout-content class="overflow-y-auto p-6 pt-22 pb-24 scrollbar-hide">
             <router-view />
           </n-layout-content>

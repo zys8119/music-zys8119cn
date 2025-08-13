@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { NIcon } from 'naive-ui'
 import { PlayCircleOutline, HeartOutline, SearchOutline } from '@vicons/ionicons5'
+import { musicApi } from '../services/api'
 
 const router = useRouter()
 
@@ -45,16 +46,11 @@ const risingSongs = ref<RisingSong[]>([])
 // 获取推荐歌手数据
 const fetchRecommendedArtists = async () => {
   try {
-    const response = await fetch('http://localhost:81/music/recommended-singer')
-    if (response.ok) {
-      const result = await response.json()
-      if (result.code === 200 && result.data) {
-        recommendedArtists.value = result.data
-      } else {
-        console.error('API returned error:', result)
-      }
+    const result = await musicApi.getRecommendedSingers()
+    if (result.code === 200 && result.data) {
+      recommendedArtists.value = result.data
     } else {
-      console.error('Failed to fetch recommended artists:', response.statusText)
+      console.error('API returned error:', result)
     }
   } catch (error) {
     console.error('Error fetching recommended artists:', error)
@@ -64,17 +60,12 @@ const fetchRecommendedArtists = async () => {
 // 获取网友都在听数据
 const fetchPopularSongs = async () => {
   try {
-    const response = await fetch('http://localhost:81/music/netizensAreAllListening')
-    if (response.ok) {
-      const result = await response.json()
-      if (result.code === 200 && result.data) {
-        popularSongs.value = result.data
-        return
-      } else {
-        console.error('API returned error:', result)
-      }
+    const result = await musicApi.getNetizensListening()
+    if (result.code === 200 && result.data) {
+      popularSongs.value = result.data
+      return
     } else {
-      console.error('Failed to fetch popular songs:', response.statusText)
+      console.error('API returned error:', result)
     }
   } catch (error) {
     console.error('Error fetching popular songs:', error)
@@ -152,17 +143,12 @@ const fetchPopularSongs = async () => {
 // 获取热门歌单数据
 const fetchHotPlaylists = async () => {
   try {
-    const response = await fetch('http://localhost:81/music/hotPlayList')
-    if (response.ok) {
-      const result = await response.json()
-      if (result.code === 200 && result.data) {
-        hotPlaylists.value = result.data
-        return
-      } else {
-        console.error('API returned error:', result)
-      }
+    const result = await musicApi.getHotPlaylists()
+    if (result.code === 200 && result.data) {
+      hotPlaylists.value = result.data
+      return
     } else {
-      console.error('Failed to fetch hot playlists:', response.statusText)
+      console.error('API returned error:', result)
     }
   } catch (error) {
     console.error('Error fetching hot playlists:', error)
@@ -226,21 +212,16 @@ const fetchHotPlaylists = async () => {
 // 获取歌曲飙升榜数据
 const fetchRisingSongs = async () => {
   try {
-    const response = await fetch('http://localhost:81/music/songRising')
-    if (response.ok) {
-      const result = await response.json()
-      if (result.code === 200 && result.data) {
-        // 为数据添加排名
-        risingSongs.value = result.data.map((song: any, index: number) => ({
-          ...song,
-          rank: index + 1
-        }))
-        return
-      } else {
-        console.error('API returned error:', result)
-      }
+    const result = await musicApi.getRisingSongs()
+    if (result.code === 200 && result.data) {
+      // 为数据添加排名
+      risingSongs.value = result.data.map((song: any, index: number) => ({
+        ...song,
+        rank: index + 1
+      }))
+      return
     } else {
-      console.error('Failed to fetch rising songs:', response.statusText)
+      console.error('API returned error:', result)
     }
   } catch (error) {
     console.error('Error fetching rising songs:', error)
