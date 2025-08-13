@@ -4,16 +4,13 @@ import type { AxiosRequestConfig } from "axios";
 
 // 获取API基础URL
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
-console.log(API_BASE_URL);
-console.log(import.meta.env.VITE_API_BASE_URL);
-console.log(import.meta.env);
 // 创建axios实例
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 10000, // 10秒超时
+  timeout: 0, // 0表示不超时
 });
 
 // 通用请求函数
