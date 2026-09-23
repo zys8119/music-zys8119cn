@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Howl } from 'howler'
+import type { Ref } from 'vue'
 import { NIcon } from 'naive-ui'
 import {
   PlayCircle,
@@ -12,7 +13,9 @@ import {
   Shuffle,
   PlayForward,
   RefreshCircle,
-  Download
+  Download,
+  ChevronUp,
+  ChevronDown
 } from '@vicons/ionicons5'
 
 interface Song {
@@ -52,6 +55,8 @@ const globalCurrentTime = inject('currentTime', ref(0))
 const globalDuration = inject('duration', ref(0))
 const globalSeekTo = inject('seekTo', () => { })
 const playMode = inject('playMode', ref('sequence'))
+// 播放条可见状态（与分页联动）
+const playerVisible = inject<Ref<boolean>>('playerVisible', ref(true))
 
 // 播放模式图标映射
 const playModeIcon = computed(() => {
@@ -93,6 +98,82 @@ function handleTogglePlayMode() {
 // 播放模式变化时提示当前模式
 watch(playMode, () => {
   message.info(playModeText.value)
+})
+
+// ===== 自动隐藏逻辑 =====
+// 空闲多久后自动隐藏
+const HIDE_DELAY = 3000
+let hideTimer: number | null = null
+
+// 清除待执行的隐藏定时器
+function clearHideTimer() {
+  if (hideTimer !== null) {
+    clearTimeout(hideTimer)
+    hideTimer = null
+  }
+}
+
+// 立即显示播放条
+function showPlayer() {
+  clearHideTimer()
+  playerVisible.value = true
+}
+
+// 延迟隐藏：鼠标在区域内或正在交互时不隐藏
+function scheduleHide() {
+  clearHideTimer()
+  hideTimer = window.setTimeout(() => {
+    playerVisible.value = false
+  }, HIDE_DELAY)
+}
+
+// 鼠标进入播放区域：取消隐藏
+function onPointerEnter() {
+  clearHideTimer()
+}
+
+// 鼠标离开播放区域：延时隐藏
+function onPointerLeave() {
+  scheduleHide()
+}
+
+// 手动切换显隐（按钮）
+function togglePlayerVisible() {
+  if (playerVisible.value) {
+    playerVisible.value = false
+    clearHideTimer()
+  } else {
+    showPlayer()
+  }
+}
+
+// 鼠标接近窗口底部时自动显示
+function onWindowMouseMove(e: MouseEvent) {
+  if (!props.currentSong) return
+  const threshold = 80
+  if (window.innerHeight - e.clientY <= threshold) {
+    showPlayer()
+  }
+}
+
+// 有歌曲时启动自动隐藏；无歌曲时复位
+watch(() => props.currentSong, (song) => {
+  if (song) {
+    playerVisible.value = true
+    scheduleHide()
+  } else {
+    clearHideTimer()
+    playerVisible.value = true
+  }
+})
+
+onMounted(() => {
+  window.addEventListener('mousemove', onWindowMouseMove)
+})
+
+onBeforeUnmount(() => {
+  clearHideTimer()
+  window.removeEventListener('mousemove', onWindowMouseMove)
 })
 
 // 使用全局状态或本地状态
@@ -220,7 +301,16 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="music-player-bar fixed bottom-0 left-0 right-0 h-18 flex items-center px-6 z-100" v-if="currentSong">
+  <div class="music-player-bar fixed bottom-0 left-0 right-0 h-18 flex items-center px-6 z-100"
+    :class="{ 'music-player-bar--hidden': !playerVisible }" v-if="currentSong" @mouseenter="onPointerEnter"
+    @mouseleave="onPointerLeave">
+    <!-- 手动显隐按钮：隐藏时朝上（点击显示），显示时朝下（点击隐藏） -->
+    <button class="player-toggle" type="button" :aria-label="playerVisible ? '隐藏播放条' : '显示播放条'"
+      @click="togglePlayerVisible">
+      <n-icon size="16">
+        <component :is="playerVisible ? ChevronDown : ChevronUp" />
+      </n-icon>
+    </button>
     <div class="flex items-center w-30%">
       <div class="w-12 h-12 rounded-lg overflow-hidden mr-3 player-cover">
         <img :src="currentSong.cover" alt="Cover" class="w-full h-full object-cover" />
@@ -303,10 +393,58 @@ onBeforeUnmount(() => {
   -webkit-backdrop-filter: saturate(180%) blur(16px);
   border-top: 1px solid rgba(0, 0, 0, 0.06);
   box-shadow: 0 -6px 24px rgba(31, 45, 61, 0.08);
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.32s ease;
+}
+
+/* 隐藏态：向下移出视口（仅位移，保留把手按钮可见可点） */
+.music-player-bar--hidden {
+  transform: translateY(100%);
+}
+
+/* 隐藏态下：仅播放条本体不响应鼠标，把手按钮仍可点击 */
+.music-player-bar--hidden> :not(.player-toggle) {
+  pointer-events: none;
+}
+
+/* 手动显隐按钮：位于播放条顶部最左侧的把手 */
+.player-toggle {
+  position: absolute;
+  top: -26px;
+  left: 12px;
+  width: 46px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: saturate(180%) blur(16px);
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+  color: #6b7280;
+  cursor: pointer;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.player-toggle:hover {
+  color: #1890ff;
+  background: #f2f8ff;
+}
+
+.player-toggle:focus-visible {
+  outline: 2px solid #1890ff;
+  outline-offset: 2px;
 }
 
 .player-cover {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
   flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .music-player-bar {
+    transition: none;
+  }
 }
 </style>

@@ -24,6 +24,9 @@ const playMode = ref<PlayMode>(PlayMode.SEQUENCE)
 const categories = ref<Category[]>([])
 const categoriesLoading = ref(false)
 
+// 播放条是否可见（供播放器与分页联动）
+const playerVisible = ref(true)
+
 // 热门榜单分类（全站通用）
 interface HotRanking {
   url: string;
@@ -398,6 +401,7 @@ provide('playlist', playlist)
 provide('currentSong', currentSong)
 provide('isPlaying', isPlaying)
 provide('volume', volume)
+provide('playerVisible', playerVisible)
 provide('currentTime', currentTime)
 provide('duration', duration)
 provide('playMode', playMode)

@@ -37,6 +37,11 @@ const router = useRouter()
 const addSongsToPlaylist = inject('addSongsToPlaylist') as (songs: Song[]) => void
 // 当前播放歌曲：用于让固定分页避开底部播放条
 const currentSong = inject<Ref<Song | null>>('currentSong', ref(null))
+// 播放条是否可见：分页随之上下移动
+const playerVisible = inject<Ref<boolean>>('playerVisible', ref(true))
+
+// 分页底部偏移：播放条可见时为 88px，隐藏时贴近底部
+const pageBottom = computed(() => (currentSong.value && playerVisible.value ? '88px' : '16px'))
 
 const keyword = computed(() => String(route.query.wd || '').trim())
 const page = computed(() => Number(route.query.page) || 1)
@@ -163,7 +168,7 @@ watch([keyword, page], () => {
 
       <!-- 分页：固定定位在底部（完全参考站点 .page 结构） -->
       <nav v-if="!isLoading && listItems.length > 0 && pagination.items.length > 0" class="page"
-        :style="{ bottom: currentSong ? '88px' : '16px' }" aria-label="分页导航">
+        :style="{ bottom: pageBottom }" aria-label="分页导航">
         <template v-for="(link, idx) in pagination.items" :key="`${link.label}-${idx}`">
           <span v-if="link.current" class="page-link current" aria-current="page">{{ link.label }}</span>
           <a v-else-if="link.url" class="page-link" :href="link.url" @click="handlePageClick(link, $event)">{{
@@ -333,12 +338,11 @@ watch([keyword, page], () => {
   }
 }
 
-/* 分页样式：固定定位在底部居中（完全参考站点 .page 结构，现代化美化） */
+/* 分页样式：固定定位在右下角（完全参考站点 .page 结构，现代化美化） */
 .page {
   position: fixed;
-  left: 50%;
+  right: 16px;
   bottom: 16px;
-  transform: translateX(-50%);
   z-index: 30;
   max-width: min(920px, calc(100vw - 32px));
   display: flex;
