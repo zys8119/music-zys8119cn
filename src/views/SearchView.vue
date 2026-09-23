@@ -40,8 +40,8 @@ const currentSong = inject<Ref<Song | null>>('currentSong', ref(null))
 // 播放条是否可见：分页随之上下移动
 const playerVisible = inject<Ref<boolean>>('playerVisible', ref(true))
 
-// 分页底部偏移：播放条可见时为 88px，隐藏时贴近底部
-const pageBottom = computed(() => (currentSong.value && playerVisible.value ? '88px' : '16px'))
+// 分页底部偏移：播放条可见时为 88px，隐藏时为 39px
+const pageBottom = computed(() => (currentSong.value && playerVisible.value ? '88px' : '39px'))
 
 const keyword = computed(() => String(route.query.wd || '').trim())
 const page = computed(() => Number(route.query.page) || 1)

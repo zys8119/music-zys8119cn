@@ -101,50 +101,24 @@ watch(playMode, () => {
 })
 
 // ===== 自动隐藏逻辑 =====
-// 空闲多久后自动隐藏
-const HIDE_DELAY = 3000
-let hideTimer: number | null = null
-
-// 清除待执行的隐藏定时器
-function clearHideTimer() {
-  if (hideTimer !== null) {
-    clearTimeout(hideTimer)
-    hideTimer = null
-  }
-}
-
 // 立即显示播放条
 function showPlayer() {
-  clearHideTimer()
   playerVisible.value = true
 }
 
-// 延迟隐藏：鼠标在区域内或正在交互时不隐藏
-function scheduleHide() {
-  clearHideTimer()
-  hideTimer = window.setTimeout(() => {
-    playerVisible.value = false
-  }, HIDE_DELAY)
-}
-
-// 鼠标进入播放区域：取消隐藏
+// 鼠标进入播放区域：保持显示
 function onPointerEnter() {
-  clearHideTimer()
+  playerVisible.value = true
 }
 
-// 鼠标离开播放区域：延时隐藏
+// 鼠标离开播放区域：立即隐藏
 function onPointerLeave() {
-  scheduleHide()
+  playerVisible.value = false
 }
 
 // 手动切换显隐（按钮）
 function togglePlayerVisible() {
-  if (playerVisible.value) {
-    playerVisible.value = false
-    clearHideTimer()
-  } else {
-    showPlayer()
-  }
+  playerVisible.value = !playerVisible.value
 }
 
 // 鼠标接近窗口底部时自动显示
@@ -156,15 +130,9 @@ function onWindowMouseMove(e: MouseEvent) {
   }
 }
 
-// 有歌曲时启动自动隐藏；无歌曲时复位
+// 有歌曲时显示，无歌曲时隐藏
 watch(() => props.currentSong, (song) => {
-  if (song) {
-    playerVisible.value = true
-    scheduleHide()
-  } else {
-    clearHideTimer()
-    playerVisible.value = true
-  }
+  playerVisible.value = !!song
 })
 
 onMounted(() => {
@@ -172,7 +140,6 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  clearHideTimer()
   window.removeEventListener('mousemove', onWindowMouseMove)
 })
 
@@ -311,6 +278,13 @@ onBeforeUnmount(() => {
         <component :is="playerVisible ? ChevronDown : ChevronUp" />
       </n-icon>
     </button>
+    <!-- 隐藏态保留的迷你进度头：显示歌名与播放进度 -->
+    <div v-show="!playerVisible" class="player-mini">
+      <span class="player-mini__title">{{ currentSong.title }}</span>
+      <div class="player-mini__progress">
+        <div class="player-mini__bar" :style="{ width: progress + '%' }"></div>
+      </div>
+    </div>
     <div class="flex items-center w-30%">
       <div class="w-12 h-12 rounded-lg overflow-hidden mr-3 player-cover">
         <img :src="currentSong.cover" alt="Cover" class="w-full h-full object-cover" />
@@ -435,6 +409,54 @@ onBeforeUnmount(() => {
 .player-toggle:focus-visible {
   outline: 2px solid #1890ff;
   outline-offset: 2px;
+}
+
+/* 隐藏态的迷你进度头：负 top 使其在播放条下移后仍停留在视口底部 */
+.player-mini {
+  position: absolute;
+  top: -30px;
+  left: 64px;
+  right: 12px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: saturate(180%) blur(16px);
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+  box-shadow: 0 -4px 16px rgba(31, 45, 61, 0.08);
+  overflow: hidden;
+}
+
+.player-mini__title {
+  flex-shrink: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-mini__progress {
+  flex: 1;
+  min-width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.player-mini__bar {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #1890ff, #722ed1);
+  transition: width 0.2s linear;
 }
 
 .player-cover {
