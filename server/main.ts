@@ -317,6 +317,20 @@ function parseHotRankings(html: string) {
   return result;
 }
 
+// 搜索结果：结构与榜单页一致（.play_list ul li .name a），并解析结果总数
+function parseSearchResult(html: string) {
+  const $ = cheerio.load(html);
+  const list: Array<{ url: string; name: string }> = [];
+  $(".play_list ul li .name a").each((_, a) => {
+    const $a = $(a);
+    list.push({ url: absUrl($a.attr("href")), name: $a.text().trim() });
+  });
+  const heading = $(".play_list .title h1").first().text().trim();
+  const totalText = $(".play_list .pagedata span").first().text().trim();
+  const total = Number(totalText) || 0;
+  return { list, heading, total };
+}
+
 // 从歌曲详情页调用 /js/play.php 获取真实播放地址
 async function fetchSongPlayInfo(songPageUrl: string) {
   const url = songPageUrl.startsWith("http") ? songPageUrl : BASE + songPageUrl;
@@ -405,6 +419,28 @@ app.get("/music/songRising", async (_req: Request, res: Response) => {
 app.get("/music/hotRankings", async (_req: Request, res: Response) => {
   try {
     ok(res, parseHotRankings(await fetchPage("/list/new.html")));
+  } catch (e) {
+    fail(res, (e as Error).message);
+  }
+});
+
+// 搜索：/so/{关键词}.html（分页 /so/{关键词}/{page}.html）
+app.get("/music/search", async (req: Request, res: Response) => {
+  const wd = String(req.query.wd || "").trim();
+  const page = Number(req.query.page) || 1;
+  if (!wd) return fail(res, "缺少搜索关键词");
+  try {
+    const path =
+      page > 1
+        ? `/so/${encodeURIComponent(wd)}/${page}.html`
+        : `/so/${encodeURIComponent(wd)}.html`;
+    const html = await fetchPage(path);
+    const result = parseSearchResult(html);
+    ok(res, {
+      keyword: wd,
+      ...result,
+      pagination: parsePagination(html),
+    });
   } catch (e) {
     fail(res, (e as Error).message);
   }

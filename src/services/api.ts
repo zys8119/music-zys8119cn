@@ -46,6 +46,12 @@ export const musicApi = {
   // 获取热门榜单分类（全站通用）
   getHotRankings: () => request("/music/hotRankings"),
 
+  // 搜索歌曲（page 从 1 开始）
+  search: (wd: string, page = 1) =>
+    request(
+      `/music/search?wd=${encodeURIComponent(wd)}&page=${page}`,
+    ),
+
   // 获取热门榜单分类（兼容旧接口）
   getHotList: () => request("/music/hotList"),
 
