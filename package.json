@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "pnpm dev",
-    "dev": "vite",
+    "dev": "vite & tsx watch server/main.ts",
     "build": "vite build",
     "preview": "vite preview",
     "deploys": "echo '====部署到服务器(备注:请在.env文件中配置serve_host_ip、serve_user、serve_dir)====' && sh ./deploy.sh"
@@ -13,6 +13,8 @@
   "dependencies": {
     "@vicons/ionicons5": "^0.13.0",
     "axios": "^1.11.0",
+    "cheerio": "^1.2.0",
+    "express": "^5.2.1",
     "howler": "^2.2.4",
     "naive-ui": "^2.42.0",
     "vite-plugin-vue-devtools": "^8.0.0",
@@ -20,10 +22,13 @@
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.2",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vue/runtime-core": "^3.5.18",
     "@vue/tsconfig": "^0.7.0",
     "less": "^4.4.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.2",
     "unocss": "^66.4.2",
     "unplugin-auto-import": "^20.0.0",
