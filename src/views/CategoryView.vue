@@ -272,9 +272,9 @@ onMounted(() => {
 
     <!-- 歌曲/榜单/MV：列表（支持全选/多选播放） -->
     <template v-else>
-      <div v-if="isPlayable" class="list-toolbar">
+      <div v-if="isPlayable" class="list-toolbar !justify-start">
         <n-checkbox :checked="isAllSelected" :indeterminate="isIndeterminate" @update:checked="toggleSelectAll">
-          全选<span v-if="selectedIndexes.size > 0" class="toolbar-count">已选 {{ selectedIndexes.size }} 首</span>
+          全选
         </n-checkbox>
         <n-button type="primary" size="small" :disabled="selectedIndexes.size === 0" @click="playSelected">
           <template #icon>
@@ -284,6 +284,7 @@ onMounted(() => {
           </template>
           播放选中
         </n-button>
+        <span v-if="selectedIndexes.size > 0" class="toolbar-count">已选 {{ selectedIndexes.size }} 首</span>
       </div>
 
       <n-list hoverable clickable class="song-list">
@@ -314,7 +315,7 @@ onMounted(() => {
       <template v-for="(link, idx) in pagination.items" :key="`${link.label}-${idx}`">
         <span v-if="link.current" class="page-link current" aria-current="page">{{ link.label }}</span>
         <a v-else-if="link.url" class="page-link" :href="link.url" @click="handlePageClick(link, $event)">{{ link.label
-        }}</a>
+          }}</a>
         <span v-else class="page-link disabled">{{ link.label }}</span>
       </template>
     </nav>
@@ -496,6 +497,12 @@ html.dark .skeleton-block {
 .song-list :deep(.n-list-item.list-item--selected) {
   background: linear-gradient(90deg, #eef6ff, #f6efff);
   box-shadow: inset 0 0 0 1px rgba(24, 144, 255, 0.25);
+}
+
+/* 暗色模式：选中行使用深色底，避免浅色渐变刺眼 */
+html.dark .song-list :deep(.n-list-item.list-item--selected) {
+  background: linear-gradient(90deg, rgba(24, 144, 255, 0.2), rgba(114, 46, 209, 0.2));
+  box-shadow: inset 0 0 0 1px rgba(77, 171, 255, 0.4);
 }
 
 .song-list :deep(.n-list-item) {

@@ -251,7 +251,7 @@ async function toggleFavorite(song: Song, event: Event) {
           </n-checkbox>
         </div>
 
-        <n-list class="flex-1 overflow-y-auto playlist-list">
+        <n-list class="flex-1 overflow-y-auto playlist-list bg-#0000">
           <n-list-item v-for="song in filteredPlaylist" :key="song.id"
             class="cursor-pointer rounded transition-colors-300 group sidebar-song" :class="{
               'sidebar-song--active': isSongActive(song),
