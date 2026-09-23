@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, inject } from 'vue'
+import { ref, computed, watch, inject, type Ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NList, NListItem, NThing, NEmpty, NCard } from 'naive-ui'
 import { SearchOutline, PlayCircleOutline } from '@vicons/ionicons5'
@@ -35,6 +35,8 @@ interface Pagination {
 const route = useRoute()
 const router = useRouter()
 const addSongsToPlaylist = inject('addSongsToPlaylist') as (songs: Song[]) => void
+// 当前播放歌曲：用于让固定分页避开底部播放条
+const currentSong = inject<Ref<Song | null>>('currentSong', ref(null))
 
 const keyword = computed(() => String(route.query.wd || '').trim())
 const page = computed(() => Number(route.query.page) || 1)
@@ -159,12 +161,13 @@ watch([keyword, page], () => {
         </n-list-item>
       </n-list>
 
-      <!-- 分页：完全参考站点 .page 结构 -->
+      <!-- 分页：固定定位在底部（完全参考站点 .page 结构） -->
       <nav v-if="!isLoading && listItems.length > 0 && pagination.items.length > 0" class="page"
-        aria-label="分页导航">
+        :style="{ bottom: currentSong ? '88px' : '16px' }" aria-label="分页导航">
         <template v-for="(link, idx) in pagination.items" :key="`${link.label}-${idx}`">
           <span v-if="link.current" class="page-link current" aria-current="page">{{ link.label }}</span>
-          <a v-else-if="link.url" class="page-link" :href="link.url" @click="handlePageClick(link, $event)">{{ link.label }}</a>
+          <a v-else-if="link.url" class="page-link" :href="link.url" @click="handlePageClick(link, $event)">{{
+            link.label }}</a>
           <span v-else class="page-link disabled">{{ link.label }}</span>
         </template>
       </nav>
@@ -175,6 +178,8 @@ watch([keyword, page], () => {
 <style scoped>
 .search-view {
   padding: 8px 4px 20px;
+  /* 为底部固定分页预留空间，避免遮挡内容 */
+  padding-bottom: 96px;
 }
 
 .search-hint {
@@ -316,6 +321,7 @@ watch([keyword, page], () => {
   0% {
     background-position: 100% 50%;
   }
+
   100% {
     background-position: 0 50%;
   }
@@ -327,14 +333,27 @@ watch([keyword, page], () => {
   }
 }
 
-/* 分页样式（完全参考站点 .page 结构，现代化美化） */
+/* 分页样式：固定定位在底部居中（完全参考站点 .page 结构，现代化美化） */
 .page {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 30;
+  max-width: min(920px, calc(100vw - 32px));
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
   gap: 8px;
-  margin: 32px 0 12px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 8px 28px rgba(31, 45, 61, 0.12);
+  transition: bottom 0.24s ease;
 }
 
 .page-link {

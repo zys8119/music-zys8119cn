@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, inject } from 'vue'
+import { ref, computed, onMounted, watch, inject, type Ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NList, NListItem, NThing, NEmpty, NCard, NGrid, NGridItem, NCheckbox, NButton, NIcon } from 'naive-ui'
 import { PlayCircleOutline } from '@vicons/ionicons5'
@@ -48,6 +48,8 @@ const categoryId = computed(() => Number(route.params.id))
 // 从全局注入的分类与播放函数
 const categories = inject('categories', ref<Category[]>([]))
 const addSongsToPlaylist = inject('addSongsToPlaylist') as (songs: Song[]) => void
+// 当前播放歌曲：用于让固定分页避开底部播放条
+const currentSong = inject<Ref<Song | null>>('currentSong', ref(null))
 
 // 当前分类（来自导航）
 const currentCategory = computed((): Category | undefined =>
@@ -301,8 +303,9 @@ onMounted(() => {
       </n-list>
     </template>
 
-    <!-- 分页：完全参考站点 .page 结构（首页 / 上一页 / 页码 / 下一页 / 尾页） -->
-    <nav v-if="!isLoading && listItems.length > 0 && pagination.items.length > 0" class="page" aria-label="分页导航">
+    <!-- 分页：固定定位在底部（完全参考站点 .page 结构） -->
+    <nav v-if="!isLoading && listItems.length > 0 && pagination.items.length > 0" class="page"
+      :style="{ bottom: currentSong ? '88px' : '16px' }" aria-label="分页导航">
       <template v-for="(link, idx) in pagination.items" :key="`${link.label}-${idx}`">
         <span v-if="link.current" class="page-link current" aria-current="page">{{ link.label }}</span>
         <a v-else-if="link.url" class="page-link" :href="link.url" @click="handlePageClick(link, $event)">{{ link.label
@@ -316,6 +319,8 @@ onMounted(() => {
 <style scoped>
 .category-view {
   padding: 8px 4px 20px;
+  /* 为底部固定分页预留空间，避免遮挡内容 */
+  padding-bottom: 96px;
 }
 
 /* 面包屑 */
@@ -612,14 +617,27 @@ onMounted(() => {
   overflow: hidden;
 }
 
-/* 分页样式（完全参考站点 .page 结构，现代化美化） */
+/* 分页样式：固定定位在底部居中（完全参考站点 .page 结构，现代化美化） */
 .page {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 30;
+  max-width: min(920px, calc(100vw - 32px));
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
   gap: 8px;
-  margin: 32px 0 12px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 8px 28px rgba(31, 45, 61, 0.12);
+  transition: bottom 0.24s ease;
 }
 
 .page-link {
