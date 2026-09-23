@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, inject } from 'vue'
-import { useRoute } from 'vue-router'
-import { NList, NListItem, NThing, NEmpty, NCard, NGrid, NGridItem, NButton, NSpace, NSpin } from 'naive-ui'
+import { useRoute, useRouter } from 'vue-router'
+import { NList, NListItem, NThing, NEmpty, NCard, NGrid, NGridItem } from 'naive-ui'
 import { musicApi } from '../services/api'
 
 interface Song {
@@ -41,6 +41,7 @@ interface Pagination {
 }
 
 const route = useRoute()
+const router = useRouter()
 const categoryId = computed(() => Number(route.params.id))
 
 // 从全局注入的分类与播放函数
@@ -146,14 +147,27 @@ onMounted(() => {
 
 <template>
   <div class="category-view">
+    <!-- 面包屑：显示当前位置 -->
+    <nav class="breadcrumb" aria-label="面包屑导航">
+      <a class="breadcrumb-link" @click="router.push({ name: 'home' })">首页</a>
+      <span class="breadcrumb-sep">/</span>
+      <span class="breadcrumb-current">{{ categoryName }}</span>
+    </nav>
+
     <div class="view-header">
       <h1 class="view-title">{{ categoryName }}</h1>
       <span v-if="pagination.total > 1" class="view-subtitle">共 {{ pagination.total }} 页</span>
     </div>
 
-    <div v-if="isLoading" class="loading-container">
-      <n-spin size="large" />
-      <p>加载中...</p>
+    <!-- 加载态：骨架屏 -->
+    <div v-if="isLoading" class="skeleton-list">
+      <div v-for="n in 8" :key="n" class="skeleton-row">
+        <div class="skeleton-block skeleton-avatar"></div>
+        <div class="skeleton-lines">
+          <div class="skeleton-block skeleton-line"></div>
+          <div class="skeleton-block skeleton-line skeleton-line--short"></div>
+        </div>
+      </div>
     </div>
 
     <n-card v-else-if="listItems.length === 0" class="empty-container">
@@ -208,17 +222,50 @@ onMounted(() => {
       </n-list-item>
     </n-list>
 
-    <!-- 分页：完全参考站点 .page 结构 -->
-    <div v-if="!isLoading && listItems.length > 0 && pagination.items.length > 0" class="page">
-      <a v-for="(link, idx) in pagination.items" :key="idx" :class="{ current: link.current }"
-        :href="link.url || 'javascript:;'" @click="handlePageClick(link, $event)">{{ link.label }}</a>
-    </div>
+    <!-- 分页：完全参考站点 .page 结构（首页 / 上一页 / 页码 / 下一页 / 尾页） -->
+    <nav v-if="!isLoading && listItems.length > 0 && pagination.items.length > 0" class="page" aria-label="分页导航">
+      <template v-for="(link, idx) in pagination.items" :key="`${link.label}-${idx}`">
+        <span v-if="link.current" class="page-link current" aria-current="page">{{ link.label }}</span>
+        <a v-else-if="link.url" class="page-link" :href="link.url" @click="handlePageClick(link, $event)">{{ link.label
+          }}</a>
+        <span v-else class="page-link disabled">{{ link.label }}</span>
+      </template>
+    </nav>
   </div>
 </template>
 
 <style scoped>
 .category-view {
   padding: 8px 4px 20px;
+}
+
+/* 面包屑 */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #9ca3af;
+  margin-bottom: 14px;
+}
+
+.breadcrumb-link {
+  color: #6b7280;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.breadcrumb-link:hover {
+  color: #1890ff;
+}
+
+.breadcrumb-sep {
+  color: #d1d5db;
+}
+
+.breadcrumb-current {
+  color: #374151;
+  font-weight: 500;
 }
 
 .view-header {
@@ -255,15 +302,66 @@ onMounted(() => {
   color: #9ca3af;
 }
 
-.loading-container {
-  text-align: center;
-  padding: 80px 60px;
-  color: #9ca3af;
+/* 骨架屏加载态 */
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
 }
 
-.loading-container p {
-  margin-top: 14px;
-  font-size: 14px;
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+}
+
+.skeleton-lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.skeleton-block {
+  background: linear-gradient(90deg, #f1f3f6 25%, #e6e9ee 37%, #f1f3f6 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+  border-radius: 8px;
+}
+
+.skeleton-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.skeleton-line {
+  height: 14px;
+  width: 60%;
+}
+
+.skeleton-line--short {
+  width: 35%;
+  height: 11px;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-block {
+    animation: none;
+  }
 }
 
 .empty-container {
@@ -409,48 +507,65 @@ onMounted(() => {
   overflow: hidden;
 }
 
-/* 分页样式（参考站点 .page） */
+/* 分页样式（完全参考站点 .page 结构，现代化美化） */
 .page {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
   gap: 8px;
-  margin: 28px 0 10px;
+  margin: 32px 0 12px;
 }
 
-.page a {
-  min-width: 36px;
-  height: 36px;
-  padding: 0 12px;
+.page-link {
+  min-width: 38px;
+  height: 38px;
+  padding: 0 14px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
   background: #fff;
-  color: #555;
+  color: #4b5563;
   font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
   text-decoration: none;
+  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease,
+    box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+a.page-link {
   cursor: pointer;
-  transition: all 0.2s ease;
 }
 
-.page a:hover {
-  border-color: #1890ff;
+a.page-link:hover {
   color: #1890ff;
-  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
+  border-color: #1890ff;
+  background: #f2f8ff;
+  box-shadow: 0 4px 14px rgba(24, 144, 255, 0.18);
+  transform: translateY(-1px);
 }
 
-.page a.current {
-  background: #1890ff;
-  border-color: #1890ff;
+a.page-link:focus-visible {
+  outline: 2px solid #1890ff;
+  outline-offset: 2px;
+}
+
+.page-link.current {
+  background: linear-gradient(135deg, #1890ff, #722ed1);
+  border-color: transparent;
   color: #fff;
   font-weight: 600;
+  box-shadow: 0 6px 16px rgba(24, 144, 255, 0.32);
   cursor: default;
 }
 
-.page a.current:hover {
-  box-shadow: none;
+.page-link.disabled {
+  color: #c0c4cc;
+  background: #fafafa;
+  border-color: #f0f0f0;
+  cursor: not-allowed;
 }
 </style>

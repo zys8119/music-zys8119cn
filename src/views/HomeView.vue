@@ -455,7 +455,7 @@ const handleFeatureClick = (feature: string) => {
 
     <!-- 网友都在听 -->
     <div class="mb-12">
-      <h2 class="text-2xl font-bold mb-6 text-gray-800">网友都在听</h2>
+      <h2 class="section-title">网友都在听</h2>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div v-for="(song, index) in popularSongs" :key="index"
           class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer p-3"
@@ -477,7 +477,7 @@ const handleFeatureClick = (feature: string) => {
     </div>
     <!-- 热门歌单 -->
     <div class="mb-12">
-      <h2 class="text-2xl font-bold mb-6 text-gray-800">热门歌单</h2>
+      <h2 class="section-title">热门歌单</h2>
       <div
         class="overflow-x-auto overflow-y-hidden scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
         <div class="flex gap-4 pb-4" style="width: max-content; min-width: 100%;">
@@ -502,5 +502,134 @@ const handleFeatureClick = (feature: string) => {
 </template>
 
 <style scoped>
-/* UnoCSS classes are used in template, no custom styles needed */
+/* ===== Hero 区块：渐变背景 + 光晕 ===== */
+.hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  padding: 56px 40px;
+  background: linear-gradient(135deg, #1e1b4b 0%, #4338ca 55%, #7c3aed 100%);
+  box-shadow: 0 20px 50px -20px rgba(67, 56, 202, 0.55);
+  isolation: isolate;
+}
+
+.hero-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.55;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.hero-glow--1 {
+  width: 320px;
+  height: 320px;
+  background: #22c55e;
+  top: -120px;
+  right: -60px;
+}
+
+.hero-glow--2 {
+  width: 280px;
+  height: 280px;
+  background: #38bdf8;
+  bottom: -140px;
+  left: -40px;
+}
+
+.hero-title {
+  margin: 0 0 14px;
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+  color: #f8fafc;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.25);
+}
+
+.hero-subtitle {
+  margin: 0;
+  font-size: 16px;
+  color: rgba(248, 250, 252, 0.82);
+  max-width: 520px;
+  line-height: 1.6;
+}
+
+/* ===== 区块标题：左侧渐变竖条 ===== */
+.section-title {
+  position: relative;
+  margin: 0 0 22px;
+  padding-left: 16px;
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  letter-spacing: 0.2px;
+}
+
+.section-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 5px;
+  height: 22px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #1890ff, #722ed1);
+}
+
+/* ===== 推荐歌手卡片 ===== */
+.artist-card {
+  transition: transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1);
+  padding: 6px 2px;
+  border-radius: 14px;
+}
+
+.artist-card:hover {
+  transform: translateY(-4px);
+}
+
+.artist-avatar {
+  border: 2px solid #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  transition: box-shadow 0.24s ease;
+}
+
+.artist-card:hover .artist-avatar {
+  box-shadow: 0 6px 20px rgba(24, 144, 255, 0.3);
+}
+
+/* ===== 横向滚动条美化 ===== */
+.overflow-x-auto {
+  scroll-behavior: smooth;
+}
+
+/* ===== 卡片悬停统一提升 ===== */
+.bg-white.rounded-lg {
+  transition: box-shadow 0.24s ease, transform 0.24s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .artist-card,
+  .bg-white.rounded-lg {
+    transition: none;
+  }
+
+  .artist-card:hover {
+    transform: none;
+  }
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .hero {
+    padding: 40px 24px;
+  }
+
+  .hero-title {
+    font-size: 28px;
+  }
+}
 </style>

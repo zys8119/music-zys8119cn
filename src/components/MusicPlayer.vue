@@ -50,7 +50,7 @@ const previousVolume = ref(props.volume)
 // 注入全局状态
 const globalCurrentTime = inject('currentTime', ref(0))
 const globalDuration = inject('duration', ref(0))
-const globalSeekTo = inject('seekTo', () => {})
+const globalSeekTo = inject('seekTo', () => { })
 const playMode = inject('playMode', ref('sequence'))
 
 // 播放模式图标映射
@@ -210,10 +210,9 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="fixed bottom-0 left-0 right-0 h-18 bg-white border-t border-gray-200 flex items-center px-6 z-100"
-    v-if="currentSong">
+  <div class="music-player-bar fixed bottom-0 left-0 right-0 h-18 flex items-center px-6 z-100" v-if="currentSong">
     <div class="flex items-center w-30%">
-      <div class="w-12 h-12 rounded overflow-hidden mr-3">
+      <div class="w-12 h-12 rounded-lg overflow-hidden mr-3 player-cover">
         <img :src="currentSong.cover" alt="Cover" class="w-full h-full object-cover" />
       </div>
       <div class="flex flex-col">
@@ -288,5 +287,16 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* UnoCSS classes are used in template, no custom styles needed */
+.music-player-bar {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: saturate(180%) blur(16px);
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 -6px 24px rgba(31, 45, 61, 0.08);
+}
+
+.player-cover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
 </style>
