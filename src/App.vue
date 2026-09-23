@@ -87,26 +87,31 @@ async function fetchRealSongInfo(url: string) {
   }
 }
 
+// 判断是否为歌曲详情页链接（需请求真实播放地址；直链则无需再解析）
+function isSongPageUrl(url: string): boolean {
+  return /\/mp[34]\/[^/]+\.html?$/i.test(url)
+}
+
 // 播放歌曲
 async function playSong(song: Song) {
-  // 如果歌曲有URL，先获取真实的歌曲信息
-  if (song.url) {
+  // 仅当仍是歌曲详情页链接时才请求真实播放地址，避免重复解析
+  if (song.url && isSongPageUrl(song.url)) {
     const realSongInfo = await fetchRealSongInfo(song.url)
     if (realSongInfo) {
       // 使用真实的歌曲信息更新当前歌曲
-      const updatedSong: Song = {
+      currentSong.value = {
         ...song,
         title: realSongInfo.title || song.title,
         cover: realSongInfo.pic || song.cover,
         url: realSongInfo.url || song.url
       }
-      currentSong.value = updatedSong
     } else {
-      // 如果获取失败，使用原始歌曲信息
-      currentSong.value = song
+      // 获取失败时仍使用原始信息，并重建对象引用以确保播放器感知切换
+      currentSong.value = { ...song }
     }
   } else {
-    currentSong.value = song
+    // 已是可播放直链：重建对象引用，确保播放器重新加载（单曲循环依赖此行为）
+    currentSong.value = { ...song }
   }
   isPlaying.value = true
 }
@@ -146,9 +151,16 @@ async function playNext() {
       break
 
     case PlayMode.RANDOM:
-      // 随机播放：随机选择一首歌曲
-      const randomIndex = Math.floor(Math.random() * playlist.value.length)
-      await playSong(playlist.value[randomIndex])
+      // 随机播放：尽量避开当前歌曲，避免连续重复
+      if (playlist.value.length === 1) {
+        await playSong(playlist.value[0])
+      } else {
+        let randomIndex = currentIndex
+        while (randomIndex === currentIndex) {
+          randomIndex = Math.floor(Math.random() * playlist.value.length)
+        }
+        await playSong(playlist.value[randomIndex])
+      }
       break
 
     case PlayMode.LOOP:

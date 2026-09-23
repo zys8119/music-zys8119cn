@@ -85,6 +85,16 @@ const playModeText = computed(() => {
   }
 })
 
+// 切换播放模式（由父组件切换状态）
+function handleTogglePlayMode() {
+  emit('toggle-play-mode')
+}
+
+// 播放模式变化时提示当前模式
+watch(playMode, () => {
+  message.info(playModeText.value)
+})
+
 // 使用全局状态或本地状态
 const currentTime = computed(() => globalCurrentTime.value || localCurrentTime.value)
 const duration = computed(() => globalDuration.value || localDuration.value)
@@ -223,7 +233,7 @@ onBeforeUnmount(() => {
 
     <div class="flex-1 flex flex-col items-center">
       <div class="flex items-center mb-2">
-        <n-button quaternary circle @click="emit('toggle-play-mode')" :title="playModeText">
+        <n-button quaternary circle @click="handleTogglePlayMode" :title="playModeText">
           <template #icon>
             <n-icon size="20" :class="{ 'text-blue-500': playMode !== 'sequence' }">
               <component :is="playModeIcon" />
