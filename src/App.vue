@@ -4,6 +4,7 @@ import MusicSidebar from './components/MusicSidebar.vue'
 import MusicPlayer from './components/MusicPlayer.vue'
 import KeyboardShortcuts from './components/KeyboardShortcuts.vue'
 import HotRankings from './components/HotRankings.vue'
+import LyricsPanel from './components/LyricsPanel.vue'
 import { musicApi } from './services/api'
 
 // 导入类型
@@ -26,6 +27,9 @@ const categoriesLoading = ref(false)
 
 // 播放条是否可见（供播放器与分页联动）
 const playerVisible = ref(true)
+
+// 当前歌词（原始 LRC 文本）
+const currentLyric = ref('')
 
 // 热门榜单分类（全站通用）
 interface HotRanking {
@@ -95,10 +99,31 @@ function isSongPageUrl(url: string): boolean {
   return /\/mp[34]\/[^/]+\.html?$/i.test(url)
 }
 
+// 获取歌词（依赖原始歌曲详情页 URL）
+async function fetchLyric(url: string) {
+  if (!isSongPageUrl(url)) {
+    currentLyric.value = ''
+    return
+  }
+  try {
+    const res = await musicApi.getLyric(url)
+    if (res.code === 200 && res.data) {
+      currentLyric.value = res.data.lrc || ''
+    } else {
+      currentLyric.value = ''
+    }
+  } catch (error) {
+    console.error('获取歌词出错:', error)
+    currentLyric.value = ''
+  }
+}
+
 // 播放歌曲
 async function playSong(song: Song) {
   // 仅当仍是歌曲详情页链接时才请求真实播放地址，避免重复解析
   if (song.url && isSongPageUrl(song.url)) {
+    // 先用原始详情页 URL 获取歌词
+    fetchLyric(song.url)
     const realSongInfo = await fetchRealSongInfo(song.url)
     if (realSongInfo) {
       // 使用真实的歌曲信息更新当前歌曲
@@ -113,7 +138,8 @@ async function playSong(song: Song) {
       currentSong.value = { ...song }
     }
   } else {
-    // 已是可播放直链：重建对象引用，确保播放器重新加载（单曲循环依赖此行为）
+    // 已是可播放直链：清空歌词并重建对象引用
+    currentLyric.value = ''
     currentSong.value = { ...song }
   }
   isPlaying.value = true
@@ -402,6 +428,7 @@ provide('currentSong', currentSong)
 provide('isPlaying', isPlaying)
 provide('volume', volume)
 provide('playerVisible', playerVisible)
+provide('currentLyric', currentLyric)
 provide('currentTime', currentTime)
 provide('duration', duration)
 provide('playMode', playMode)
@@ -443,6 +470,7 @@ provide('downloadSong', downloadSong)
         <MusicPlayer :current-song="currentSong" :is-playing="isPlaying" :volume="volume" @toggle-play="togglePlay"
           @play-next="playNext" @play-prev="playPrev" @update:volume="(val: number) => volume = val"
           @toggle-play-mode="togglePlayMode" @download-song="downloadSong" />
+        <LyricsPanel />
         <KeyboardShortcuts />
       </div>
     </n-message-provider>

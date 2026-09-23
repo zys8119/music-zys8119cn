@@ -351,11 +351,28 @@ async function fetchSongPlayInfo(songPageUrl: string) {
   });
   const text = await res.text();
   const data = JSON.parse(text) as {
+    lkid?: number;
     title?: string;
     pic?: string;
     url?: string;
   };
   return data;
+}
+
+// 歌词接口：cid 即 play.php 返回的 lkid
+async function fetchLyric(songPageUrl: string) {
+  const info = await fetchSongPlayInfo(songPageUrl);
+  if (!info.lkid) return { lrc: "" };
+  const res = await fetch(`https://js.eev3.com/lrc.php?cid=${info.lkid}`, {
+    headers: { "User-Agent": UA, Referer: BASE + "/" },
+  });
+  const text = await res.text();
+  try {
+    const data = JSON.parse(text) as { lrc?: string };
+    return { lrc: data.lrc || "" };
+  } catch {
+    return { lrc: "" };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -500,6 +517,17 @@ app.get("/music/get", async (req: Request, res: Response) => {
   if (!url) return fail(res, "缺少 url 参数");
   try {
     ok(res, await fetchSongPlayInfo(url));
+  } catch (e) {
+    fail(res, (e as Error).message);
+  }
+});
+
+// 根据 URL 获取歌词
+app.get("/music/lyric", async (req: Request, res: Response) => {
+  const url = String(req.query.url || "");
+  if (!url) return fail(res, "缺少 url 参数");
+  try {
+    ok(res, await fetchLyric(url));
   } catch (e) {
     fail(res, (e as Error).message);
   }

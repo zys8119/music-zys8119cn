@@ -69,6 +69,10 @@ export const musicApi = {
   // 根据URL获取歌曲信息
   getSongInfo: (url: string) =>
     request(`/music/get?url=${encodeURIComponent(url)}`),
+
+  // 根据URL获取歌词
+  getLyric: (url: string) =>
+    request(`/music/lyric?url=${encodeURIComponent(url)}`),
 };
 
 // 导出默认API实例

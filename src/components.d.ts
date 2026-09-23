@@ -14,6 +14,7 @@ declare module 'vue' {
     HelloWorld: typeof import('./components/HelloWorld.vue')['default']
     HotRankings: typeof import('./components/HotRankings.vue')['default']
     KeyboardShortcuts: typeof import('./components/KeyboardShortcuts.vue')['default']
+    LyricsPanel: typeof import('./components/LyricsPanel.vue')['default']
     MusicContent: typeof import('./components/MusicContent.vue')['default']
     MusicHeader: typeof import('./components/MusicHeader.vue')['default']
     MusicPlayer: typeof import('./components/MusicPlayer.vue')['default']
