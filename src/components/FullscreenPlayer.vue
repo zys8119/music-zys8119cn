@@ -125,6 +125,89 @@ function isCurrent(song: Song): boolean {
   return currentSong.value?.id === song.id
 }
 
+// ===== 歌词 =====
+const currentLyric = inject<Ref<string>>('currentLyric', ref(''))
+
+interface LyricLine {
+  time: number
+  text: string
+}
+
+const lyricsEl = ref<HTMLElement | null>(null)
+// 用户手动滚动时暂停自动滚动，避免与其冲突
+const userScrollLock = ref(false)
+let scrollIdleTimer: number | null = null
+
+// 解析 LRC 文本为按时间升序的行列表
+const lyricLines = computed<LyricLine[]>(() => {
+  const raw = currentLyric.value || ''
+  if (!raw) return []
+  const result: LyricLine[] = []
+  for (const row of raw.split('\n')) {
+    const text = row.replace(/\[[^\]]*\]/g, '').trim()
+    if (!text) continue
+    const re = /\[(\d+):(\d+(?:\.\d+)?)\]/g
+    let m: RegExpExecArray | null
+    while ((m = re.exec(row)) !== null) {
+      result.push({ time: parseInt(m[1], 10) * 60 + parseFloat(m[2]), text })
+    }
+  }
+  return result.sort((a, b) => a.time - b.time)
+})
+
+// 当前高亮行索引
+const activeLyricIndex = computed(() => {
+  const t = currentTime.value
+  let idx = -1
+  for (let i = 0; i < lyricLines.value.length; i++) {
+    if (lyricLines.value[i].time <= t + 0.3) idx = i
+    else break
+  }
+  return idx
+})
+
+// 用户手动滚动：暂停自动滚动 3 秒
+function pauseAutoScroll() {
+  userScrollLock.value = true
+  if (scrollLockTimer !== null) clearTimeout(scrollLockTimer)
+  scrollLockTimer = window.setTimeout(() => {
+    userScrollLock.value = false
+  }, 3000)
+}
+
+// 将指定行滚动到容器中间
+function scrollToLyric(idx: number) {
+  const container = lyricsEl.value
+  const el = container?.children[idx] as HTMLElement | undefined
+  if (container && el) {
+    container.scrollTo({
+      top: el.offsetTop - container.clientHeight / 2 + el.clientHeight / 2,
+      behavior: 'smooth',
+    })
+  }
+}
+
+// 高亮行变化时自动滚动（用户手动滚动期间不打扰）
+watch(activeLyricIndex, async (idx) => {
+  if (userScrollLock.value || idx < 0 || !fullscreenOpen.value) return
+  await nextTick()
+  scrollToLyric(idx)
+})
+
+// 打开全屏页时定位到当前行
+watch(fullscreenOpen, async (open) => {
+  if (!open) return
+  await nextTick()
+  if (activeLyricIndex.value >= 0) scrollToLyric(activeLyricIndex.value)
+})
+
+// 点击歌词跳转到对应进度
+function seekToLyric(line: LyricLine) {
+  seekTo(line.time)
+  userScrollLock.value = false
+  if (scrollLockTimer !== null) clearTimeout(scrollLockTimer)
+}
+
 // Esc 关闭全屏播放页
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape' && fullscreenOpen.value) {
@@ -133,7 +216,10 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 onMounted(() => document.addEventListener('keydown', onKeydown))
-onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onKeydown)
+  if (scrollLockTimer !== null) clearTimeout(scrollLockTimer)
+})
 </script>
 
 <template>
@@ -194,6 +280,16 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
             <h1 class="fp-info__title">{{ currentSong?.title || '暂无歌曲' }}</h1>
             <p class="fp-info__artist">{{ currentSong?.artist }}</p>
           </div>
+
+          <!-- 歌词：可滚动，点击跳转进度 -->
+          <div v-if="lyricLines.length" ref="lyricsEl" class="fp-lyrics" @wheel="pauseAutoScroll"
+            @touchmove="pauseAutoScroll">
+            <p v-for="(line, idx) in lyricLines" :key="idx" class="fp-lyrics__line"
+              :class="{ 'fp-lyrics__line--active': idx === activeLyricIndex }" @click="seekToLyric(line)">
+              {{ line.text }}
+            </p>
+          </div>
+          <div v-else class="fp-lyrics fp-lyrics--empty">暂无歌词</div>
         </section>
       </div>
 
@@ -450,16 +546,18 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 36px;
+  gap: 20px;
   min-height: 0;
+  padding: 8px 0;
 }
 
 .fp-vinyl {
   position: relative;
-  width: min(320px, 42vh);
+  width: min(260px, 30vh);
   aspect-ratio: 1;
   display: grid;
   place-items: center;
+  flex-shrink: 0;
 }
 
 .fp-vinyl__disc {
@@ -539,6 +637,56 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
   margin: 0;
   font-size: 14px;
   color: rgba(248, 250, 252, 0.6);
+}
+
+/* 歌词区：固定在舞台下方，可滚动 */
+.fp-lyrics {
+  flex: 1;
+  min-height: 96px;
+  width: min(560px, 100%);
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  padding: 8px 12px;
+  text-align: center;
+  mask-image: linear-gradient(180deg, transparent 0, #000 18%, #000 82%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 18%, #000 82%, transparent 100%);
+}
+
+.fp-lyrics__line {
+  margin: 0;
+  padding: 7px 6px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: rgba(248, 250, 252, 0.5);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.2s ease, background-color 0.2s ease, font-weight 0.2s ease,
+    transform 0.2s ease;
+}
+
+.fp-lyrics__line:hover {
+  color: rgba(248, 250, 252, 0.85);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.fp-lyrics__line:focus-visible {
+  outline: 2px solid #22c55e;
+  outline-offset: 2px;
+}
+
+.fp-lyrics__line--active {
+  color: #22c55e;
+  font-weight: 600;
+  transform: scale(1.04);
+}
+
+.fp-lyrics--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 96px;
+  font-size: 14px;
+  color: rgba(248, 250, 252, 0.4);
 }
 
 /* 底部 */
