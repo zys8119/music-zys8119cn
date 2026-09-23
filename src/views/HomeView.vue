@@ -563,7 +563,7 @@ const handleFeatureClick = (feature: string) => {
   padding-left: 16px;
   font-size: 24px;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--app-text);
   letter-spacing: 0.2px;
 }
 

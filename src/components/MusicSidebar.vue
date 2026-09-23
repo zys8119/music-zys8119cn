@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, inject, ref } from 'vue'
-import { MusicalNote, Heart, Time, Albums, List, TrashOutline, CheckboxOutline } from '@vicons/ionicons5'
-import { NIcon, NButton, NCheckbox } from 'naive-ui'
+import { MusicalNote, Heart, Time, Albums, List, TrashOutline, HeartOutline } from '@vicons/ionicons5'
+import { NIcon, NButton, NCheckbox, useMessage } from 'naive-ui'
+import { musicApi } from '../services/api'
 
 interface Song {
   id: number;
@@ -164,13 +165,43 @@ const clearPlaylist = () => {
 }
 
 // 处理歌曲点击
-const handleSongItemClick = (song: Song, event: Event) => {
+function handleSongItemClick(song: Song, event: Event) {
   // 如果点击的是复选框区域，不播放歌曲
   const target = event.target as HTMLElement
   if (target.closest('.n-checkbox') || target.closest('[data-checkbox]')) {
     return
   }
   handleSongClick(song)
+}
+
+// 收藏歌曲
+const message = useMessage()
+// 记录已收藏的歌曲 url
+const favoritedUrls = ref<Set<string>>(new Set())
+
+async function toggleFavorite(song: Song, event: Event) {
+  event.stopPropagation()
+  const key = song.url
+  if (favoritedUrls.value.has(key)) {
+    message.info('该歌曲已在收藏中')
+    return
+  }
+  try {
+    const res = await musicApi.addFavorite({
+      title: song.title,
+      artist: song.artist,
+      cover: song.cover,
+      url: song.url,
+    })
+    if (res.code === 200) {
+      favoritedUrls.value.add(key)
+      favoritedUrls.value = new Set(favoritedUrls.value)
+      message.success('已添加到收藏')
+    }
+  } catch (e) {
+    console.error('收藏失败', e)
+    message.error('收藏失败')
+  }
 }
 </script>
 
@@ -197,7 +228,7 @@ const handleSongItemClick = (song: Song, event: Event) => {
         </div>
 
         <!-- 批量操作栏 -->
-        <div v-if="selectedSongs.size > 0" class="flex justify-between items-center mb-3 p-2 bg-gray-50 rounded">
+        <div v-if="selectedSongs.size > 0" class="flex justify-between items-center mb-3 p-2 batch-bar rounded">
           <div class="flex items-center gap-2">
             <n-checkbox :checked="isAllSelected" :indeterminate="isIndeterminate" @update:checked="toggleSelectAll">
               全选 ({{ selectedSongs.size }}/{{ filteredPlaylist.length }})
@@ -222,9 +253,9 @@ const handleSongItemClick = (song: Song, event: Event) => {
 
         <n-list class="flex-1 overflow-y-auto">
           <n-list-item v-for="song in filteredPlaylist" :key="song.id"
-            class="cursor-pointer rounded transition-colors-300 hover:bg-gray-50 group" :class="{
-              'bg-blue-50': isSongActive(song),
-              'bg-red-50': selectedSongs.has(song.id)
+            class="cursor-pointer rounded transition-colors-300 group sidebar-song" :class="{
+              'sidebar-song--active': isSongActive(song),
+              'sidebar-song--selected': selectedSongs.has(song.id)
             }" @click="handleSongItemClick(song, $event)">
             <template #prefix>
               <n-checkbox :checked="selectedSongs.has(song.id)" @click.stop="toggleSongSelection(song.id, $event)"
@@ -232,13 +263,20 @@ const handleSongItemClick = (song: Song, event: Event) => {
             </template>
             <n-thing class="flex-1">
               <template #header>
-                <div class="text-sm font-medium text-gray-800 truncate">{{ song.title }}</div>
+                <div class="text-sm font-medium truncate sidebar-song__title">{{ song.title }}</div>
               </template>
               <template #description>
-                <div class="text-xs text-gray-400 truncate">{{ song.artist }}</div>
+                <div class="text-xs truncate sidebar-song__artist">{{ song.artist }}</div>
               </template>
             </n-thing>
             <template #suffix>
+              <n-button size="small" quaternary class="fav-btn" aria-label="收藏歌曲" @click="toggleFavorite(song, $event)">
+                <template #icon>
+                  <n-icon :color="favoritedUrls.has(song.url) ? '#eb2f96' : undefined">
+                    <HeartOutline />
+                  </n-icon>
+                </template>
+              </n-button>
               <n-button size="small" type="error" quaternary
                 class="opacity-0 group-hover:opacity-100 transition-opacity" @click="removeSingleSong(song.id, $event)">
                 <template #icon>
@@ -257,8 +295,9 @@ const handleSongItemClick = (song: Song, event: Event) => {
 
 <style scoped>
 .sidebar {
-  background: #fff;
-  border-right: 1px solid rgba(0, 0, 0, 0.06);
+  background: var(--app-surface);
+  border-right: 1px solid var(--app-border);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .list-header {
@@ -272,7 +311,7 @@ const handleSongItemClick = (song: Song, event: Event) => {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--app-text);
   position: relative;
   padding-left: 10px;
 }
@@ -289,6 +328,28 @@ const handleSongItemClick = (song: Song, event: Event) => {
   background: linear-gradient(180deg, #1890ff, #722ed1);
 }
 
+/* 批量操作栏 */
+.batch-bar {
+  background: var(--app-surface-2);
+}
+
+/* 播放列表项 */
+.sidebar-song__title {
+  color: var(--app-text);
+}
+
+.sidebar-song__artist {
+  color: var(--app-muted);
+}
+
+.sidebar-song--active {
+  background: var(--app-active-bg);
+}
+
+.sidebar-song--selected {
+  background: rgba(255, 77, 79, 0.12);
+}
+
 /* 播放列表项美化 */
 :deep(.n-list-item) {
   border-radius: 10px;
@@ -296,7 +357,7 @@ const handleSongItemClick = (song: Song, event: Event) => {
 }
 
 :deep(.n-list-item:hover) {
-  background-color: #f7f9fc;
+  background-color: var(--app-hover);
   box-shadow: inset 0 0 0 1px rgba(24, 144, 255, 0.12);
 }
 </style>

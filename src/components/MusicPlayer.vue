@@ -304,8 +304,8 @@ onBeforeUnmount(() => {
         </span>
       </button>
       <div class="flex flex-col">
-        <div class="text-sm font-medium text-gray-800 mb-1">{{ currentSong.title }}</div>
-        <div class="text-xs text-gray-400">{{ currentSong.artist }}</div>
+        <div class="text-sm font-medium mb-1 player-song-title">{{ currentSong.title }}</div>
+        <div class="text-xs player-song-artist">{{ currentSong.artist }}</div>
       </div>
     </div>
 
@@ -345,9 +345,9 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="flex items-center w-full px-4">
-        <span class="text-xs text-gray-400 w-10 text-center">{{ formattedCurrentTime }}</span>
+        <span class="text-xs w-10 text-center player-time">{{ formattedCurrentTime }}</span>
         <n-slider :value="progress" :step="0.1" @update:value="handleSeek" />
-        <span class="text-xs text-gray-400 w-10 text-center">{{ formattedDuration }}</span>
+        <span class="text-xs w-10 text-center player-time">{{ formattedDuration }}</span>
       </div>
     </div>
 
@@ -376,12 +376,26 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .music-player-bar {
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--app-surface);
   backdrop-filter: saturate(180%) blur(16px);
   -webkit-backdrop-filter: saturate(180%) blur(16px);
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  border-top: 1px solid var(--app-border);
   box-shadow: 0 -6px 24px rgba(31, 45, 61, 0.08);
-  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.32s ease;
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.32s ease,
+    background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* 歌曲信息文字 */
+.player-song-title {
+  color: var(--app-text);
+}
+
+.player-song-artist {
+  color: var(--app-muted);
+}
+
+.player-time {
+  color: var(--app-muted);
 }
 
 /* 隐藏态：向下移出视口（仅位移，保留把手按钮可见可点） */
@@ -404,20 +418,20 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--app-border);
   border-bottom: none;
   border-radius: 10px 10px 0 0;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--app-surface);
   backdrop-filter: saturate(180%) blur(16px);
   -webkit-backdrop-filter: saturate(180%) blur(16px);
-  color: #6b7280;
+  color: var(--app-muted);
   cursor: pointer;
   transition: color 0.2s ease, background-color 0.2s ease;
 }
 
 .player-toggle:hover {
   color: #1890ff;
-  background: #f2f8ff;
+  background: var(--app-active-bg);
 }
 
 .player-toggle:focus-visible {
@@ -436,10 +450,10 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 10px;
   padding: 0 14px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--app-border);
   border-bottom: none;
   border-radius: 12px 12px 0 0;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--app-surface);
   backdrop-filter: saturate(180%) blur(16px);
   -webkit-backdrop-filter: saturate(180%) blur(16px);
   box-shadow: 0 -4px 16px rgba(31, 45, 61, 0.08);
@@ -451,7 +465,7 @@ onBeforeUnmount(() => {
   min-width: 0;
   font-size: 12px;
   font-weight: 500;
-  color: #374151;
+  color: var(--app-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -462,7 +476,7 @@ onBeforeUnmount(() => {
   min-width: 40px;
   height: 4px;
   border-radius: 2px;
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--app-border);
   overflow: hidden;
 }
 

@@ -1,6 +1,23 @@
 import express from "express";
 import type { Request, Response } from "express";
 import * as cheerio from "cheerio";
+import {
+  listFavorites,
+  addFavorite,
+  removeFavorite,
+  moveFavorite,
+  isFavorite,
+  listGroups,
+  addGroup,
+  removeGroup,
+  listRecent,
+  addRecent,
+  clearRecent,
+  listSearchHistory,
+  addSearchHistory,
+  removeSearchHistory,
+  clearSearchHistory,
+} from "./db";
 
 // 目标音乐站点
 const BASE = "https://www.22a5.com";
@@ -383,11 +400,14 @@ const app = express();
 // CORS：允许前端开发/生产环境跨域访问
 app.use((_req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.header("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type");
   next();
 });
 app.options(/.*/, (_req, res) => res.sendStatus(204));
+
+// JSON 请求体解析
+app.use(express.json());
 
 const ok = (res: Response, data: unknown) => res.json({ code: 200, data });
 const fail = (res: Response, message: string) =>
@@ -531,6 +551,102 @@ app.get("/music/lyric", async (req: Request, res: Response) => {
   } catch (e) {
     fail(res, (e as Error).message);
   }
+});
+
+// ---------------------------------------------------------------------------
+// 收藏接口
+// ---------------------------------------------------------------------------
+
+// 收藏列表（可按分组过滤）
+app.get("/music/favorites", (req: Request, res: Response) => {
+  const groupId = req.query.groupId ? Number(req.query.groupId) : undefined;
+  ok(res, listFavorites(groupId));
+});
+
+// 添加收藏
+app.post("/music/favorites", (req: Request, res: Response) => {
+  const { title, artist, cover, url, groupId } = req.body || {};
+  if (!title || !url) return fail(res, "缺少 title 或 url");
+  ok(res, addFavorite({ title, artist, cover, url }, groupId ?? null));
+});
+
+// 删除收藏
+app.delete("/music/favorites/:id", (req: Request, res: Response) => {
+  removeFavorite(Number(req.params.id));
+  ok(res, { success: true });
+});
+
+// 移动收藏到分组
+app.patch("/music/favorites/:id", (req: Request, res: Response) => {
+  const groupId = req.body?.groupId ?? null;
+  ok(res, moveFavorite(Number(req.params.id), groupId));
+});
+
+// 判断是否已收藏
+app.get("/music/favorites/check", (req: Request, res: Response) => {
+  const url = String(req.query.url || "");
+  ok(res, { favorite: isFavorite(url) });
+});
+
+// ---------------------------------------------------------------------------
+// 收藏分组接口
+// ---------------------------------------------------------------------------
+app.get("/music/favorite-groups", (_req: Request, res: Response) => {
+  ok(res, listGroups());
+});
+
+app.post("/music/favorite-groups", (req: Request, res: Response) => {
+  const name = String(req.body?.name || "").trim();
+  if (!name) return fail(res, "缺少分组名称");
+  ok(res, addGroup(name));
+});
+
+app.delete("/music/favorite-groups/:id", (req: Request, res: Response) => {
+  removeGroup(Number(req.params.id));
+  ok(res, { success: true });
+});
+
+// ---------------------------------------------------------------------------
+// 最近播放接口（最近 50 条）
+// ---------------------------------------------------------------------------
+app.get("/music/recent", (_req: Request, res: Response) => {
+  ok(res, listRecent());
+});
+
+app.post("/music/recent", (req: Request, res: Response) => {
+  const { title, artist, cover, url } = req.body || {};
+  if (!title || !url) return fail(res, "缺少 title 或 url");
+  addRecent({ title, artist, cover, url });
+  ok(res, { success: true });
+});
+
+app.delete("/music/recent", (_req: Request, res: Response) => {
+  clearRecent();
+  ok(res, { success: true });
+});
+
+// ---------------------------------------------------------------------------
+// 搜索历史接口
+// ---------------------------------------------------------------------------
+app.get("/music/search-history", (_req: Request, res: Response) => {
+  ok(res, listSearchHistory());
+});
+
+app.post("/music/search-history", (req: Request, res: Response) => {
+  const keyword = String(req.body?.keyword || "").trim();
+  if (!keyword) return fail(res, "缺少关键词");
+  addSearchHistory(keyword);
+  ok(res, { success: true });
+});
+
+app.delete("/music/search-history/:id", (req: Request, res: Response) => {
+  removeSearchHistory(Number(req.params.id));
+  ok(res, { success: true });
+});
+
+app.delete("/music/search-history", (_req: Request, res: Response) => {
+  clearSearchHistory();
+  ok(res, { success: true });
 });
 
 app.listen(PORT, () => {

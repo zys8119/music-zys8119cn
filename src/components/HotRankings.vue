@@ -116,11 +116,12 @@ onBeforeUnmount(() => {
   margin-bottom: 20px;
   padding: 12px 16px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.88);
+  background: var(--app-surface);
   backdrop-filter: saturate(180%) blur(14px);
   -webkit-backdrop-filter: saturate(180%) blur(14px);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--app-border);
   box-shadow: 0 6px 20px rgba(31, 45, 61, 0.06);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .hot-rankings__header {
@@ -136,7 +137,7 @@ onBeforeUnmount(() => {
   gap: 8px;
   font-size: 15px;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--app-text);
 }
 
 .hot-rankings__nav {
@@ -150,10 +151,10 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--app-border);
   border-radius: 8px;
-  background: #fff;
-  color: #6b7280;
+  background: var(--app-surface);
+  color: var(--app-muted);
   cursor: pointer;
   transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
 }
@@ -161,7 +162,7 @@ onBeforeUnmount(() => {
 .scroll-btn:hover:not(:disabled) {
   color: #1890ff;
   border-color: #1890ff;
-  background: #f2f8ff;
+  background: var(--app-active-bg);
 }
 
 .scroll-btn:disabled {
@@ -194,9 +195,9 @@ onBeforeUnmount(() => {
   max-width: 220px;
   padding: 7px 14px;
   border-radius: 14px;
-  border: 1px solid #e5e7eb;
-  background: #fff;
-  color: #4b5563;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
+  color: var(--app-muted);
   font-size: 13px;
   font-weight: 500;
   line-height: 1.4;
@@ -215,7 +216,7 @@ onBeforeUnmount(() => {
 .rank-chip:hover {
   color: #1890ff;
   border-color: #1890ff;
-  background: #f2f8ff;
+  background: var(--app-active-bg);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(24, 144, 255, 0.16);
 }

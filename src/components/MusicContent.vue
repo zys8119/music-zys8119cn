@@ -46,12 +46,12 @@ const hasSong = computed((): boolean => {
           </n-icon>
         </div>
       </div>
-      
+
       <div class="song-info">
         <h1 class="song-title">{{ currentSong?.title }}</h1>
         <h2 class="song-artist">{{ currentSong?.artist }}</h2>
         <p class="song-album">专辑：{{ currentSong?.album }}</p>
-        
+
         <div class="song-actions">
           <n-button type="primary" size="large" class="action-button">
             <template #icon>
@@ -61,7 +61,7 @@ const hasSong = computed((): boolean => {
             </template>
             {{ isPlaying ? '暂停' : '播放' }}
           </n-button>
-          
+
           <n-button secondary size="large" class="action-button" @click="toggleFavorite">
             <template #icon>
               <n-icon>
@@ -70,7 +70,7 @@ const hasSong = computed((): boolean => {
             </template>
             {{ isFavorite ? '已收藏' : '收藏' }}
           </n-button>
-          
+
           <n-button secondary size="large" class="action-button">
             <template #icon>
               <n-icon>
@@ -82,7 +82,7 @@ const hasSong = computed((): boolean => {
         </div>
       </div>
     </div>
-    
+
     <div v-else class="no-song-selected">
       <n-card title="欢迎使用音乐播放器" class="welcome-card">
         <template #header-extra>
@@ -152,19 +152,19 @@ const hasSong = computed((): boolean => {
   font-size: 36px;
   font-weight: 700;
   margin-bottom: 10px;
-  color: #333;
+  color: var(--app-text);
 }
 
 .song-artist {
   font-size: 24px;
   font-weight: 500;
   margin-bottom: 10px;
-  color: #666;
+  color: var(--app-muted);
 }
 
 .song-album {
   font-size: 16px;
-  color: #888;
+  color: var(--app-muted);
   margin-bottom: 30px;
 }
 
@@ -194,6 +194,6 @@ const hasSong = computed((): boolean => {
 .welcome-content {
   text-align: center;
   padding: 40px 0;
-  color: #666;
+  color: var(--app-muted);
 }
 </style>

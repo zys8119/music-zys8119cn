@@ -73,6 +73,50 @@ export const musicApi = {
   // 根据URL获取歌词
   getLyric: (url: string) =>
     request(`/music/lyric?url=${encodeURIComponent(url)}`),
+
+  // ===== 收藏 =====
+  getFavorites: (groupId?: number) =>
+    request(
+      groupId !== undefined
+        ? `/music/favorites?groupId=${groupId}`
+        : "/music/favorites",
+    ),
+  addFavorite: (song: { title: string; artist?: string; cover?: string; url: string }, groupId?: number | null) =>
+    request("/music/favorites", {
+      method: "POST",
+      data: { ...song, groupId },
+    }),
+  removeFavorite: (id: number) =>
+    request(`/music/favorites/${id}`, { method: "DELETE" }),
+  moveFavorite: (id: number, groupId: number | null) =>
+    request(`/music/favorites/${id}`, {
+      method: "PATCH",
+      data: { groupId },
+    }),
+  checkFavorite: (url: string) =>
+    request(`/music/favorites/check?url=${encodeURIComponent(url)}`),
+
+  // ===== 收藏分组 =====
+  getFavoriteGroups: () => request("/music/favorite-groups"),
+  addFavoriteGroup: (name: string) =>
+    request("/music/favorite-groups", { method: "POST", data: { name } }),
+  removeFavoriteGroup: (id: number) =>
+    request(`/music/favorite-groups/${id}`, { method: "DELETE" }),
+
+  // ===== 最近播放 =====
+  getRecent: () => request("/music/recent"),
+  addRecent: (song: { title: string; artist?: string; cover?: string; url: string }) =>
+    request("/music/recent", { method: "POST", data: song }),
+  clearRecent: () => request("/music/recent", { method: "DELETE" }),
+
+  // ===== 搜索历史 =====
+  getSearchHistory: () => request("/music/search-history"),
+  addSearchHistory: (keyword: string) =>
+    request("/music/search-history", { method: "POST", data: { keyword } }),
+  removeSearchHistory: (id: number) =>
+    request(`/music/search-history/${id}`, { method: "DELETE" }),
+  clearSearchHistory: () =>
+    request("/music/search-history", { method: "DELETE" }),
 };
 
 // 导出默认API实例

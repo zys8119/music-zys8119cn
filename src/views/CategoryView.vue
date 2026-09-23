@@ -334,12 +334,12 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #9ca3af;
+  color: var(--app-muted);
   margin-bottom: 14px;
 }
 
 .breadcrumb-link {
-  color: #6b7280;
+  color: var(--app-muted);
   cursor: pointer;
   transition: color 0.2s ease;
 }
@@ -349,11 +349,12 @@ onMounted(() => {
 }
 
 .breadcrumb-sep {
-  color: #d1d5db;
+  color: var(--app-muted);
+  opacity: 0.6;
 }
 
 .breadcrumb-current {
-  color: #374151;
+  color: var(--app-text);
   font-weight: 500;
 }
 
@@ -369,7 +370,7 @@ onMounted(() => {
   font-size: 26px;
   font-weight: 700;
   letter-spacing: 0.3px;
-  color: #1f2937;
+  color: var(--app-text);
   position: relative;
   padding-left: 16px;
 }
@@ -388,7 +389,7 @@ onMounted(() => {
 
 .view-subtitle {
   font-size: 13px;
-  color: #9ca3af;
+  color: var(--app-muted);
 }
 
 /* 骨架屏加载态 */
@@ -418,6 +419,11 @@ onMounted(() => {
   background-size: 400% 100%;
   animation: skeleton-shimmer 1.4s ease infinite;
   border-radius: 8px;
+}
+
+html.dark .skeleton-block {
+  background: linear-gradient(90deg, #24243e 25%, #2e2e4d 37%, #24243e 63%);
+  background-size: 400% 100%;
 }
 
 .skeleton-avatar {
@@ -475,8 +481,8 @@ onMounted(() => {
   margin-bottom: 10px;
   padding: 10px 16px;
   border-radius: 12px;
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
   box-shadow: 0 2px 10px rgba(31, 45, 61, 0.04);
 }
 
@@ -499,19 +505,19 @@ onMounted(() => {
 }
 
 .song-list :deep(.n-list-item:hover) {
-  background: linear-gradient(90deg, #f5f9ff, #faf7ff);
+  background: var(--app-active-bg);
   box-shadow: 0 4px 14px rgba(24, 144, 255, 0.1);
   transform: translateX(2px);
 }
 
 .song-title {
   font-weight: 500;
-  color: #1f2937;
+  color: var(--app-text);
 }
 
 .song-url {
   font-size: 12px;
-  color: #b0b7c3;
+  color: var(--app-muted);
   word-break: break-all;
 }
 
@@ -580,7 +586,7 @@ onMounted(() => {
 
 .singer-name {
   font-size: 13px;
-  color: #374151;
+  color: var(--app-text);
   text-align: center;
   width: 100%;
   overflow: hidden;
@@ -613,7 +619,7 @@ onMounted(() => {
 
 .cover-name {
   font-size: 13px;
-  color: #374151;
+  color: var(--app-text);
   line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -636,12 +642,12 @@ onMounted(() => {
   gap: 8px;
   padding: 10px 14px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--app-surface);
   backdrop-filter: saturate(180%) blur(14px);
   -webkit-backdrop-filter: saturate(180%) blur(14px);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--app-border);
   box-shadow: 0 8px 28px rgba(31, 45, 61, 0.12);
-  transition: bottom 0.24s ease;
+  transition: bottom 0.24s ease, background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .page-link {
@@ -651,10 +657,10 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--app-border);
   border-radius: 10px;
-  background: #fff;
-  color: #4b5563;
+  background: var(--app-surface);
+  color: var(--app-text);
   font-size: 14px;
   font-weight: 500;
   line-height: 1;
@@ -670,7 +676,7 @@ a.page-link {
 a.page-link:hover {
   color: #1890ff;
   border-color: #1890ff;
-  background: #f2f8ff;
+  background: var(--app-active-bg);
   box-shadow: 0 4px 14px rgba(24, 144, 255, 0.18);
   transform: translateY(-1px);
 }
@@ -690,9 +696,9 @@ a.page-link:focus-visible {
 }
 
 .page-link.disabled {
-  color: #c0c4cc;
-  background: #fafafa;
-  border-color: #f0f0f0;
+  color: var(--app-muted);
+  background: var(--app-surface-2);
+  border-color: var(--app-border);
   cursor: not-allowed;
 }
 </style>

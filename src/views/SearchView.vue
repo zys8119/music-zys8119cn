@@ -2,7 +2,7 @@
 import { ref, computed, watch, inject, type Ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NList, NListItem, NThing, NEmpty, NCard } from 'naive-ui'
-import { SearchOutline, PlayCircleOutline } from '@vicons/ionicons5'
+import { SearchOutline, PlayCircleOutline, CloseOutline } from '@vicons/ionicons5'
 import { NIcon } from 'naive-ui'
 import { musicApi } from '../services/api'
 
@@ -53,16 +53,61 @@ const pagination = ref<Pagination>({ current: 1, total: 1, items: [] })
 const isLoading = ref(false)
 const loadError = ref('')
 
+// 搜索历史
+interface HistoryItem {
+  id: number
+  keyword: string
+  created_at: number
+}
+const history = ref<HistoryItem[]>([])
+
+async function loadHistory() {
+  try {
+    const res = await musicApi.getSearchHistory()
+    if (res.code === 200) history.value = res.data || []
+  } catch (e) {
+    console.error('加载搜索历史失败', e)
+  }
+}
+
+async function removeHistory(item: HistoryItem, event: Event) {
+  event.stopPropagation()
+  try {
+    await musicApi.removeSearchHistory(item.id)
+    await loadHistory()
+  } catch (e) {
+    console.error('删除搜索历史失败', e)
+  }
+}
+
+async function clearHistory() {
+  try {
+    await musicApi.clearSearchHistory()
+    history.value = []
+  } catch (e) {
+    console.error('清空搜索历史失败', e)
+  }
+}
+
+function goSearch(kw: string) {
+  router.push({ name: 'search', query: { wd: kw } })
+}
+
 async function loadSearch() {
   if (!keyword.value) {
     listItems.value = []
     heading.value = ''
     total.value = 0
     pagination.value = { current: 1, total: 1, items: [] }
+    loadHistory()
     return
   }
   isLoading.value = true
   loadError.value = ''
+  // 记录搜索历史（仅第一页时记录，避免翻页重复写入）
+  if (page.value === 1) {
+    musicApi.addSearchHistory(keyword.value).catch((e) => console.error('记录搜索历史失败', e))
+  }
   try {
     const res = await musicApi.search(keyword.value, page.value)
     if (res.code === 200 && res.data) {
@@ -119,6 +164,24 @@ watch([keyword, page], () => {
         <SearchOutline />
       </n-icon>
       <p>输入关键词，搜索你喜欢的歌曲</p>
+
+      <!-- 搜索历史 -->
+      <div v-if="history.length" class="history">
+        <div class="history__head">
+          <span>搜索历史</span>
+          <button class="history__clear" type="button" @click="clearHistory">清空</button>
+        </div>
+        <div class="history__list">
+          <span v-for="h in history" :key="h.id" class="history-chip" @click="goSearch(h.keyword)">
+            {{ h.keyword }}
+            <button class="history-chip__del" type="button" aria-label="删除该记录" @click="removeHistory(h, $event)">
+              <n-icon size="12">
+                <CloseOutline />
+              </n-icon>
+            </button>
+          </span>
+        </div>
+      </div>
     </div>
 
     <template v-else>
@@ -194,8 +257,80 @@ watch([keyword, page], () => {
   justify-content: center;
   gap: 16px;
   padding: 100px 20px;
-  color: #9ca3af;
+  color: var(--app-muted);
   font-size: 15px;
+}
+
+/* 搜索历史 */
+.history {
+  width: min(560px, 100%);
+  margin-top: 12px;
+}
+
+.history__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--app-muted);
+}
+
+.history__clear {
+  border: none;
+  background: transparent;
+  color: var(--app-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.history__clear:hover {
+  color: #ff4d4f;
+}
+
+.history__list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.history-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px 6px 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.history-chip:hover {
+  color: #1890ff;
+  border-color: #1890ff;
+}
+
+.history-chip__del {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--app-muted);
+  cursor: pointer;
+}
+
+.history-chip__del:hover {
+  color: #ff4d4f;
+  background: var(--app-hover);
 }
 
 .view-header {
@@ -210,7 +345,7 @@ watch([keyword, page], () => {
   font-size: 26px;
   font-weight: 700;
   letter-spacing: 0.3px;
-  color: #1f2937;
+  color: var(--app-text);
   position: relative;
   padding-left: 16px;
 }
@@ -229,7 +364,7 @@ watch([keyword, page], () => {
 
 .view-subtitle {
   font-size: 13px;
-  color: #9ca3af;
+  color: var(--app-muted);
 }
 
 .empty-container {
@@ -248,19 +383,19 @@ watch([keyword, page], () => {
 }
 
 .song-list :deep(.n-list-item:hover) {
-  background: linear-gradient(90deg, #f5f9ff, #faf7ff);
+  background: var(--app-active-bg);
   box-shadow: 0 4px 14px rgba(24, 144, 255, 0.1);
   transform: translateX(2px);
 }
 
 .song-title {
   font-weight: 500;
-  color: #1f2937;
+  color: var(--app-text);
 }
 
 .song-url {
   font-size: 12px;
-  color: #b0b7c3;
+  color: var(--app-muted);
   word-break: break-all;
 }
 
@@ -303,6 +438,11 @@ watch([keyword, page], () => {
   background-size: 400% 100%;
   animation: skeleton-shimmer 1.4s ease infinite;
   border-radius: 8px;
+}
+
+html.dark .skeleton-block {
+  background: linear-gradient(90deg, #24243e 25%, #2e2e4d 37%, #24243e 63%);
+  background-size: 400% 100%;
 }
 
 .skeleton-avatar {
@@ -352,12 +492,12 @@ watch([keyword, page], () => {
   gap: 8px;
   padding: 10px 14px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--app-surface);
   backdrop-filter: saturate(180%) blur(14px);
   -webkit-backdrop-filter: saturate(180%) blur(14px);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--app-border);
   box-shadow: 0 8px 28px rgba(31, 45, 61, 0.12);
-  transition: bottom 0.24s ease;
+  transition: bottom 0.24s ease, background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .page-link {
@@ -367,10 +507,10 @@ watch([keyword, page], () => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--app-border);
   border-radius: 10px;
-  background: #fff;
-  color: #4b5563;
+  background: var(--app-surface);
+  color: var(--app-text);
   font-size: 14px;
   font-weight: 500;
   line-height: 1;
@@ -386,7 +526,7 @@ a.page-link {
 a.page-link:hover {
   color: #1890ff;
   border-color: #1890ff;
-  background: #f2f8ff;
+  background: var(--app-active-bg);
   box-shadow: 0 4px 14px rgba(24, 144, 255, 0.18);
   transform: translateY(-1px);
 }
@@ -406,9 +546,9 @@ a.page-link:focus-visible {
 }
 
 .page-link.disabled {
-  color: #c0c4cc;
-  background: #fafafa;
-  border-color: #f0f0f0;
+  color: var(--app-muted);
+  background: var(--app-surface-2);
+  border-color: var(--app-border);
   cursor: not-allowed;
 }
 </style>

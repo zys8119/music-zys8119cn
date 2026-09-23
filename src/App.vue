@@ -11,6 +11,12 @@ import { musicApi } from './services/api'
 // 导入类型
 import type { Song, Category } from './types/index'
 import { PlayMode } from './types/index'
+import { useTheme } from './composables/useTheme'
+import { darkTheme } from 'naive-ui'
+
+// 主题
+const { mode: themeMode, isDark, setMode: setThemeMode } = useTheme()
+const naiveTheme = computed(() => (isDark.value ? darkTheme : null))
 
 // 创建路由实例
 const router = useRouter()
@@ -124,6 +130,11 @@ async function fetchLyric(url: string) {
 
 // 播放歌曲
 async function playSong(song: Song) {
+  // 记录最近播放（用原始详情页 URL 作为唯一键）
+  musicApi
+    .addRecent({ title: song.title, artist: song.artist, cover: song.cover, url: song.url })
+    .catch((e) => console.error('记录最近播放失败', e))
+
   // 仅当仍是歌曲详情页链接时才请求真实播放地址，避免重复解析
   if (song.url && isSongPageUrl(song.url)) {
     // 先用原始详情页 URL 获取歌词
@@ -432,6 +443,9 @@ provide('currentSong', currentSong)
 provide('isPlaying', isPlaying)
 provide('volume', volume)
 provide('playerVisible', playerVisible)
+provide('themeMode', themeMode)
+provide('isDark', isDark)
+provide('setThemeMode', setThemeMode)
 provide('fullscreenOpen', fullscreenOpen)
 provide('currentLyric', currentLyric)
 provide('currentTime', currentTime)
@@ -458,7 +472,7 @@ provide('downloadSong', downloadSong)
 </script>
 
 <template>
-  <n-config-provider>
+  <n-config-provider :theme="naiveTheme">
     <n-message-provider>
       <div class="h-100vh flex flex-col overflow-hidden">
         <MusicHeader :categories="categories" :current-category="currentCategory"

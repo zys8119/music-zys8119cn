@@ -39,5 +39,6 @@ declare module 'vue' {
     NThing: typeof import('naive-ui')['NThing']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    ThemeToggle: typeof import('./components/ThemeToggle.vue')['default']
   }
 }

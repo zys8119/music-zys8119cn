@@ -229,22 +229,23 @@ onBeforeUnmount(() => {
     align-items: center;
     gap: 6px;
     padding: 8px 14px;
-    border: 1px solid rgba(0, 0, 0, 0.06);
+    border: 1px solid var(--app-border);
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.92);
+    background: var(--app-surface);
     backdrop-filter: saturate(180%) blur(14px);
     -webkit-backdrop-filter: saturate(180%) blur(14px);
-    color: #4b5563;
+    color: var(--app-text);
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
     box-shadow: 0 4px 14px rgba(31, 45, 61, 0.1);
-    transition: color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+    transition: color 0.2s ease, background-color 0.3s ease, transform 0.2s ease,
+        border-color 0.3s ease;
 }
 
 .lyrics-trigger:hover {
     color: #1890ff;
-    background: #f2f8ff;
+    background: var(--app-active-bg);
     transform: translateY(-1px);
 }
 
@@ -259,26 +260,27 @@ onBeforeUnmount(() => {
     margin-bottom: 10px;
     padding: 16px;
     border-radius: 16px;
-    background: rgba(255, 255, 255, 0.96);
+    background: var(--app-surface);
     backdrop-filter: saturate(180%) blur(14px);
     -webkit-backdrop-filter: saturate(180%) blur(14px);
-    border: 1px solid rgba(0, 0, 0, 0.06);
+    border: 1px solid var(--app-border);
     box-shadow: 0 12px 36px rgba(31, 45, 61, 0.16);
     display: flex;
     flex-direction: column;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .lyrics-header {
     flex-shrink: 0;
     margin-bottom: 12px;
     padding-bottom: 10px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    border-bottom: 1px solid var(--app-border);
 }
 
 .lyrics-title {
     font-size: 14px;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--app-text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -287,7 +289,7 @@ onBeforeUnmount(() => {
 .lyrics-artist {
     margin-top: 2px;
     font-size: 12px;
-    color: #9ca3af;
+    color: var(--app-muted);
 }
 
 .lyrics-list {
@@ -309,7 +311,7 @@ onBeforeUnmount(() => {
     padding: 7px 4px;
     font-size: 14px;
     line-height: 1.5;
-    color: #6b7280;
+    color: var(--app-muted);
     border-radius: 8px;
     cursor: pointer;
     transition: color 0.2s ease, background-color 0.2s ease, transform 0.2s ease,
@@ -317,8 +319,8 @@ onBeforeUnmount(() => {
 }
 
 .lyrics-line:hover {
-    color: #374151;
-    background: rgba(0, 0, 0, 0.04);
+    color: var(--app-text);
+    background: var(--app-hover);
 }
 
 .lyrics-line--active {
@@ -333,7 +335,7 @@ onBeforeUnmount(() => {
     align-items: center;
     justify-content: center;
     min-height: 120px;
-    color: #9ca3af;
+    color: var(--app-muted);
     font-size: 14px;
 }
 

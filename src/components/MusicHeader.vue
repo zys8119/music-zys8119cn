@@ -106,7 +106,8 @@ const getCategoryIcon = (category: Category) => {
         </div>
       </div>
       <div class="user-actions">
-        <n-space>
+        <n-space align="center">
+          <ThemeToggle />
           <n-button quaternary circle>
             <template #icon>
               <n-icon>
@@ -160,11 +161,12 @@ const getCategoryIcon = (category: Category) => {
   right: 0;
   z-index: 100;
   height: 64px;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--app-surface);
   backdrop-filter: saturate(180%) blur(14px);
   -webkit-backdrop-filter: saturate(180%) blur(14px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid var(--app-border);
   box-shadow: 0 2px 12px rgba(31, 45, 61, 0.06);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .header-content {
@@ -206,13 +208,13 @@ const getCategoryIcon = (category: Category) => {
 }
 
 .search-container :deep(.search-btn) {
-  color: #6b7280;
+  color: var(--app-muted);
   transition: color 0.2s ease, background-color 0.2s ease;
 }
 
 .search-container :deep(.search-btn:hover) {
   color: #1890ff;
-  background-color: #f2f6ff;
+  background-color: var(--app-active-bg);
 }
 
 .nav-menu {
@@ -231,19 +233,19 @@ const getCategoryIcon = (category: Category) => {
   padding: 8px 12px;
   border-radius: 10px;
   cursor: pointer;
-  color: #4b5563;
+  color: var(--app-muted);
   transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 }
 
 .nav-item:hover {
-  background-color: #f2f6ff;
+  background-color: var(--app-active-bg);
   color: #1890ff;
   transform: translateY(-2px);
 }
 
 .nav-item--active {
-  background: linear-gradient(135deg, #e8f3ff, #f0e9ff);
+  background: var(--app-active-bg);
   color: #1890ff;
 }
 
@@ -275,12 +277,12 @@ const getCategoryIcon = (category: Category) => {
 }
 
 .user-actions :deep(.n-button) {
-  color: #6b7280;
+  color: var(--app-muted);
   transition: color 0.2s ease, background-color 0.2s ease;
 }
 
 .user-actions :deep(.n-button:hover) {
   color: #1890ff;
-  background-color: #f2f6ff;
+  background-color: var(--app-active-bg);
 }
 </style>
