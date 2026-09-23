@@ -138,6 +138,13 @@ const lyricsEl = ref<HTMLElement | null>(null)
 const userScrollLock = ref(false)
 let scrollIdleTimer: number | null = null
 
+// 鼠标拖拽滚动状态
+const isDragging = ref(false)
+let dragStartY = 0
+let dragStartScrollTop = 0
+// 本次按住是否发生了位移（用于区分拖拽与点击）
+let dragMoved = false
+
 // 解析 LRC 文本为按时间升序的行列表
 const lyricLines = computed<LyricLine[]>(() => {
   const raw = currentLyric.value || ''
@@ -181,6 +188,7 @@ function pauseAutoScroll() {
 
 // 鼠标离开歌词区域：立即将当前激活行重新居中
 function onLyricsLeave() {
+  if (isDragging.value) return
   if (scrollIdleTimer !== null) {
     clearTimeout(scrollIdleTimer)
     scrollIdleTimer = null
@@ -189,6 +197,49 @@ function onLyricsLeave() {
   if (fullscreenOpen.value && activeLyricIndex.value >= 0) {
     scrollToLyric(activeLyricIndex.value)
   }
+}
+
+// ===== 鼠标拖拽滚动歌词 =====
+function onDragStart(e: MouseEvent) {
+  const container = lyricsEl.value
+  if (!container || e.button !== 0) return
+  isDragging.value = true
+  dragMoved = false
+  dragStartY = e.clientY
+  dragStartScrollTop = container.scrollTop
+  // 拖拽期间锁定自动滚动
+  userScrollLock.value = true
+  if (scrollIdleTimer !== null) {
+    clearTimeout(scrollIdleTimer)
+    scrollIdleTimer = null
+  }
+  // 关闭平滑滚动，保证拖拽跟手
+  container.style.scrollBehavior = 'auto'
+  window.addEventListener('mousemove', onDragMove)
+  window.addEventListener('mouseup', onDragEnd)
+}
+
+function onDragMove(e: MouseEvent) {
+  const container = lyricsEl.value
+  if (!container || !isDragging.value) return
+  const delta = e.clientY - dragStartY
+  if (Math.abs(delta) > 3) dragMoved = true
+  container.scrollTop = dragStartScrollTop - delta
+  e.preventDefault()
+}
+
+function onDragEnd() {
+  const container = lyricsEl.value
+  isDragging.value = false
+  window.removeEventListener('mousemove', onDragMove)
+  window.removeEventListener('mouseup', onDragEnd)
+  if (container) container.style.scrollBehavior = ''
+  // 拖拽结束后延时回中（仅当确实拖动过）
+  if (dragMoved) pauseAutoScroll()
+  // 下一帧再重置，避免拖拽后的 click 误触发跳转
+  setTimeout(() => {
+    dragMoved = false
+  }, 0)
 }
 
 // 将指定行滚动到容器中间
@@ -220,8 +271,9 @@ watch(fullscreenOpen, async (open) => {
   if (activeLyricIndex.value >= 0) scrollToLyric(activeLyricIndex.value)
 })
 
-// 点击歌词跳转到对应进度
+// 点击歌词跳转到对应进度（拖拽结束后的 click 不触发）
 function seekToLyric(line: LyricLine) {
+  if (dragMoved) return
   seekTo(line.time)
   userScrollLock.value = false
   if (scrollIdleTimer !== null) {
@@ -240,6 +292,8 @@ function onKeydown(e: KeyboardEvent) {
 onMounted(() => document.addEventListener('keydown', onKeydown))
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('mousemove', onDragMove)
+  window.removeEventListener('mouseup', onDragEnd)
   if (scrollIdleTimer !== null) clearTimeout(scrollIdleTimer)
 })
 </script>
@@ -303,9 +357,9 @@ onBeforeUnmount(() => {
             <p class="fp-info__artist">{{ currentSong?.artist }}</p>
           </div>
 
-          <!-- 歌词：可滚动，点击跳转进度 -->
-          <div v-if="lyricLines.length" ref="lyricsEl" class="fp-lyrics" @wheel="pauseAutoScroll"
-            @touchmove="pauseAutoScroll" @mouseleave="onLyricsLeave">
+          <!-- 歌词：可滚动、可拖拽，点击跳转进度 -->
+          <div v-if="lyricLines.length" ref="lyricsEl" class="fp-lyrics" :class="{ 'fp-lyrics--dragging': isDragging }"
+            @wheel="pauseAutoScroll" @touchmove="pauseAutoScroll" @mouseleave="onLyricsLeave" @mousedown="onDragStart">
             <p v-for="(line, idx) in lyricLines" :key="idx" class="fp-lyrics__line"
               :class="{ 'fp-lyrics__line--active': idx === activeLyricIndex }" @click="seekToLyric(line)">
               {{ line.text }}
@@ -671,8 +725,15 @@ onBeforeUnmount(() => {
   scroll-behavior: smooth;
   padding: 8px 12px;
   text-align: center;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
   mask-image: linear-gradient(180deg, transparent 0, #000 18%, #000 82%, transparent 100%);
   -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 18%, #000 82%, transparent 100%);
+}
+
+.fp-lyrics--dragging {
+  cursor: grabbing;
 }
 
 .fp-lyrics__line {
