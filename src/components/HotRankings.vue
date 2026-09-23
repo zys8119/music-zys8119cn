@@ -111,7 +111,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .hot-rankings {
   position: sticky;
-  top: 64px;
+  top: 0;
   z-index: 20;
   margin-bottom: 20px;
   padding: 12px 16px;
