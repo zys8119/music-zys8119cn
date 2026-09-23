@@ -43,6 +43,9 @@ export const musicApi = {
   // 获取飙升歌曲
   getRisingSongs: () => request("/music/songRising"),
 
+  // 获取热门榜单分类（全站通用）
+  getHotRankings: () => request("/music/hotRankings"),
+
   // 获取热门榜单分类（兼容旧接口）
   getHotList: () => request("/music/hotList"),
 

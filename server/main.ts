@@ -288,6 +288,35 @@ function parsePagination(html: string) {
   return result;
 }
 
+// 热门榜单分类：.ilingku_fl（标题 + 榜单链接列表，指向 /list/xxx.html）
+function parseHotRankings(html: string) {
+  const $ = cheerio.load(html);
+  const $box = $(".ilingku_fl").first();
+  const result: {
+    title: string;
+    list: Array<{ url: string; name: string; current: boolean }>;
+  } = { title: "热门榜单", list: [] };
+  if (!$box.length) return result;
+
+  const title = $box.find(".title h1").first().text().trim();
+  if (title) result.title = title;
+
+  const seen = new Set<string>();
+  $box.find("li a[href]").each((_, a) => {
+    const $a = $(a);
+    const href = $a.attr("href") || "";
+    // 仅保留榜单列表页链接
+    if (!href.startsWith("/list/")) return;
+    const url = absUrl(href);
+    if (seen.has(url)) return;
+    const name = ($a.attr("title") || $a.text()).trim();
+    if (!name) return;
+    seen.add(url);
+    result.list.push({ url, name, current: $a.hasClass("current") });
+  });
+  return result;
+}
+
 // 从歌曲详情页调用 /js/play.php 获取真实播放地址
 async function fetchSongPlayInfo(songPageUrl: string) {
   const url = songPageUrl.startsWith("http") ? songPageUrl : BASE + songPageUrl;
@@ -367,6 +396,15 @@ app.get("/music/hotPlayList", async (_req: Request, res: Response) => {
 app.get("/music/songRising", async (_req: Request, res: Response) => {
   try {
     ok(res, parseSongList(await fetchPage("/list/top.html")));
+  } catch (e) {
+    fail(res, (e as Error).message);
+  }
+});
+
+// 热门榜单分类（.ilingku_fl 区块，全站通用）
+app.get("/music/hotRankings", async (_req: Request, res: Response) => {
+  try {
+    ok(res, parseHotRankings(await fetchPage("/list/new.html")));
   } catch (e) {
     fail(res, (e as Error).message);
   }

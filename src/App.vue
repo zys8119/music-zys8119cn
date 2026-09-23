@@ -3,6 +3,7 @@ import MusicHeader from './components/MusicHeader.vue'
 import MusicSidebar from './components/MusicSidebar.vue'
 import MusicPlayer from './components/MusicPlayer.vue'
 import KeyboardShortcuts from './components/KeyboardShortcuts.vue'
+import HotRankings from './components/HotRankings.vue'
 import { musicApi } from './services/api'
 
 // 导入类型
@@ -23,6 +24,28 @@ const playMode = ref<PlayMode>(PlayMode.SEQUENCE)
 const categories = ref<Category[]>([])
 const categoriesLoading = ref(false)
 
+// 热门榜单分类（全站通用）
+interface HotRanking {
+  url: string;
+  name: string;
+  current: boolean;
+}
+const hotRankings = ref<{ title: string; list: HotRanking[] }>({ title: '热门榜单', list: [] })
+
+async function fetchHotRankings() {
+  try {
+    const res = await musicApi.getHotRankings()
+    if (res.code === 200 && res.data) {
+      hotRankings.value = {
+        title: res.data.title || '热门榜单',
+        list: Array.isArray(res.data.list) ? res.data.list : [],
+      }
+    }
+  } catch (error) {
+    console.error('获取热门榜单出错:', error)
+  }
+}
+
 // 动态加载真实站点导航分类
 async function fetchCategories() {
   categoriesLoading.value = true
@@ -41,6 +64,7 @@ async function fetchCategories() {
 // 组件挂载时加载分类
 onMounted(() => {
   fetchCategories()
+  fetchHotRankings()
 })
 const currentCategory = ref<number | null>(null)
 
@@ -344,6 +368,19 @@ function handleCategoryChange(categoryId: number) {
   })
 }
 
+// 处理热门榜单点击：跳转到对应榜单分类页
+function handleHotRankingClick(item: { url: string; name: string }) {
+  // 找到匹配的导航分类 id 以便高亮，找不到则使用占位 id
+  const matched = categories.value.find((c) => c.url === item.url)
+  const id = matched ? matched.id : -1
+  currentCategory.value = id
+  router.push({
+    name: 'category',
+    params: { id: id.toString() },
+    query: { url: item.url, name: item.name, type: matched?.type || 'rank' },
+  })
+}
+
 // 提供全局数据
 provide('playlist', playlist)
 provide('currentSong', currentSong)
@@ -354,6 +391,8 @@ provide('duration', duration)
 provide('playMode', playMode)
 provide('togglePlayMode', togglePlayMode)
 provide('categories', categories)
+provide('hotRankings', hotRankings)
+provide('handleHotRankingClick', handleHotRankingClick)
 provide('currentCategory', currentCategory)
 provide('playSong', playSong)
 provide('globalPlaySong', playSong)
@@ -381,6 +420,7 @@ provide('downloadSong', downloadSong)
             :current-category="currentCategory" @play-song="playSong" @change-category="handleCategoryChange"
             @remove-songs="removeSongs" @clear-playlist="clearPlaylist" />
           <n-layout-content class="overflow-y-auto p-6 pt-22 pb-24 scrollbar-hide">
+            <HotRankings />
             <router-view />
           </n-layout-content>
         </n-layout>
