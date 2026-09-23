@@ -64,11 +64,6 @@ const playerVisible = inject<Ref<boolean>>('playerVisible', ref(true))
 // 全屏播放页开关
 const fullscreenOpen = inject<Ref<boolean>>('fullscreenOpen', ref(false))
 
-// 点击封面打开全屏播放页
-function openFullscreen() {
-  if (props.currentSong) fullscreenOpen.value = true
-}
-
 // 切换全屏播放页（快捷键 F / 封面按钮复用）
 function toggleFullscreen() {
   if (!props.currentSong) return
@@ -369,7 +364,8 @@ onBeforeUnmount(() => {
       </div>
     </div>
     <div class="flex items-center w-30%">
-      <button class="player-cover-btn" type="button" aria-label="打开全屏播放页" @click="openFullscreen">
+      <button class="player-cover-btn" type="button" :aria-label="fullscreenOpen ? '关闭全屏播放页' : '打开全屏播放页'"
+        @click="toggleFullscreen">
         <div class="w-12 h-12 rounded-lg overflow-hidden mr-3 player-cover">
           <img :src="currentSong.cover" alt="Cover" class="w-full h-full object-cover" />
         </div>
