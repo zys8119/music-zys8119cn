@@ -57,6 +57,13 @@ const globalSeekTo = inject('seekTo', () => { })
 const playMode = inject('playMode', ref('sequence'))
 // 播放条可见状态（与分页联动）
 const playerVisible = inject<Ref<boolean>>('playerVisible', ref(true))
+// 全屏播放页开关
+const fullscreenOpen = inject<Ref<boolean>>('fullscreenOpen', ref(false))
+
+// 点击封面打开全屏播放页
+function openFullscreen() {
+  if (props.currentSong) fullscreenOpen.value = true
+}
 
 // 播放模式图标映射
 const playModeIcon = computed(() => {
@@ -286,9 +293,16 @@ onBeforeUnmount(() => {
       </div>
     </div>
     <div class="flex items-center w-30%">
-      <div class="w-12 h-12 rounded-lg overflow-hidden mr-3 player-cover">
-        <img :src="currentSong.cover" alt="Cover" class="w-full h-full object-cover" />
-      </div>
+      <button class="player-cover-btn" type="button" aria-label="打开全屏播放页" @click="openFullscreen">
+        <div class="w-12 h-12 rounded-lg overflow-hidden mr-3 player-cover">
+          <img :src="currentSong.cover" alt="Cover" class="w-full h-full object-cover" />
+        </div>
+        <span class="player-cover-mask">
+          <n-icon size="18">
+            <ChevronUp />
+          </n-icon>
+        </span>
+      </button>
       <div class="flex flex-col">
         <div class="text-sm font-medium text-gray-800 mb-1">{{ currentSong.title }}</div>
         <div class="text-xs text-gray-400">{{ currentSong.artist }}</div>
@@ -462,6 +476,43 @@ onBeforeUnmount(() => {
 .player-cover {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
   flex-shrink: 0;
+}
+
+/* 封面按钮：悬停显示黑色蒙版与向上箭头 */
+.player-cover-btn {
+  position: relative;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.player-cover-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.player-cover-btn:hover .player-cover-mask,
+.player-cover-btn:focus-visible .player-cover-mask {
+  opacity: 1;
+}
+
+.player-cover-btn:focus-visible {
+  outline: 2px solid #1890ff;
+  outline-offset: 2px;
+  border-radius: 8px;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -5,6 +5,7 @@ import MusicPlayer from './components/MusicPlayer.vue'
 import KeyboardShortcuts from './components/KeyboardShortcuts.vue'
 import HotRankings from './components/HotRankings.vue'
 import LyricsPanel from './components/LyricsPanel.vue'
+import FullscreenPlayer from './components/FullscreenPlayer.vue'
 import { musicApi } from './services/api'
 
 // 导入类型
@@ -27,6 +28,9 @@ const categoriesLoading = ref(false)
 
 // 播放条是否可见（供播放器与分页联动）
 const playerVisible = ref(true)
+
+// 是否展开全屏播放页
+const fullscreenOpen = ref(false)
 
 // 当前歌词（原始 LRC 文本）
 const currentLyric = ref('')
@@ -428,6 +432,7 @@ provide('currentSong', currentSong)
 provide('isPlaying', isPlaying)
 provide('volume', volume)
 provide('playerVisible', playerVisible)
+provide('fullscreenOpen', fullscreenOpen)
 provide('currentLyric', currentLyric)
 provide('currentTime', currentTime)
 provide('duration', duration)
@@ -471,6 +476,7 @@ provide('downloadSong', downloadSong)
           @play-next="playNext" @play-prev="playPrev" @update:volume="(val: number) => volume = val"
           @toggle-play-mode="togglePlayMode" @download-song="downloadSong" />
         <LyricsPanel />
+        <FullscreenPlayer />
         <KeyboardShortcuts />
       </div>
     </n-message-provider>

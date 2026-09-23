@@ -11,6 +11,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    FullscreenPlayer: typeof import('./components/FullscreenPlayer.vue')['default']
     HelloWorld: typeof import('./components/HelloWorld.vue')['default']
     HotRankings: typeof import('./components/HotRankings.vue')['default']
     KeyboardShortcuts: typeof import('./components/KeyboardShortcuts.vue')['default']
