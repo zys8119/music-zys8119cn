@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, inject, ref, type Ref } from 'vue'
+import { computed, inject, nextTick, onMounted, ref, watch, type Ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { NIcon } from 'naive-ui'
-import { Flame } from '@vicons/ionicons5'
+import { Flame, ChevronBack, ChevronForward } from '@vicons/ionicons5'
 
 interface HotRanking {
   url: string
@@ -27,6 +27,26 @@ const list = computed(() => hotRankings.value?.list || [])
 const title = computed(() => hotRankings.value?.title || '热门榜单')
 const activeUrl = computed(() => (route.query.url as string) || '')
 
+// 横向翻页：最多两行，超出部分左右切换
+const scroller = ref<HTMLElement | null>(null)
+const canScrollLeft = ref(false)
+const canScrollRight = ref(false)
+
+// 根据滚动位置更新左右按钮可用状态
+function updateScrollState() {
+  const el = scroller.value
+  if (!el) return
+  canScrollLeft.value = el.scrollLeft > 1
+  canScrollRight.value = el.scrollLeft + el.clientWidth < el.scrollWidth - 1
+}
+
+// 左右切换一屏
+function scrollByPage(direction: 1 | -1) {
+  const el = scroller.value
+  if (!el) return
+  el.scrollBy({ left: direction * el.clientWidth, behavior: 'smooth' })
+}
+
 // 当前选中项：优先站点标记的 current，其次与路由 query.url 匹配
 function isActive(item: HotRanking): boolean {
   return item.current || (!!activeUrl.value && item.url === activeUrl.value)
@@ -36,6 +56,21 @@ function onClick(item: HotRanking) {
   if (isActive(item)) return
   handleHotRankingClick({ url: item.url, name: item.name })
 }
+
+// 列表数据变化后重新计算可滚动状态
+watch(list, async () => {
+  await nextTick()
+  updateScrollState()
+})
+
+onMounted(() => {
+  nextTick(updateScrollState)
+  window.addEventListener('resize', updateScrollState)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateScrollState)
+})
 </script>
 
 <template>
@@ -47,10 +82,22 @@ function onClick(item: HotRanking) {
         </n-icon>
         <span>{{ title }}</span>
       </div>
+      <div class="hot-rankings__nav">
+        <button class="scroll-btn" type="button" aria-label="向左切换" :disabled="!canScrollLeft" @click="scrollByPage(-1)">
+          <n-icon size="16">
+            <ChevronBack />
+          </n-icon>
+        </button>
+        <button class="scroll-btn" type="button" aria-label="向右切换" :disabled="!canScrollRight" @click="scrollByPage(1)">
+          <n-icon size="16">
+            <ChevronForward />
+          </n-icon>
+        </button>
+      </div>
     </div>
 
     <div class="hot-rankings__body">
-      <div class="hot-rankings__list">
+      <div ref="scroller" class="hot-rankings__list" @scroll="updateScrollState">
         <button v-for="item in list" :key="item.url" type="button" class="rank-chip"
           :class="{ 'rank-chip--active': isActive(item) }" :aria-current="isActive(item) ? 'true' : undefined"
           @click="onClick(item)">
@@ -92,19 +139,59 @@ function onClick(item: HotRanking) {
   color: #1f2937;
 }
 
+.hot-rankings__nav {
+  display: flex;
+  gap: 6px;
+}
+
+.scroll-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #6b7280;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.scroll-btn:hover:not(:disabled) {
+  color: #1890ff;
+  border-color: #1890ff;
+  background: #f2f8ff;
+}
+
+.scroll-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.scroll-btn:focus-visible {
+  outline: 2px solid #1890ff;
+  outline-offset: 2px;
+}
+
 .hot-rankings__body {
   position: relative;
 }
 
-/* 榜单标签整体折行展示，不再横向滚动 */
+/* 列流布局：每列纵向排 2 个，超出两行部分横向滚动切换 */
 .hot-rankings__list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(2, minmax(0, auto));
+  grid-auto-columns: max-content;
   gap: 8px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding-bottom: 2px;
 }
 
 .rank-chip {
-  max-width: 100%;
+  max-width: 220px;
   padding: 7px 14px;
   border-radius: 14px;
   border: 1px solid #e5e7eb;
@@ -115,6 +202,11 @@ function onClick(item: HotRanking) {
   line-height: 1.4;
   text-align: left;
   word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   cursor: pointer;
   transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease,
     box-shadow 0.2s ease, transform 0.2s ease;
@@ -142,12 +234,24 @@ function onClick(item: HotRanking) {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .rank-chip {
+
+  .rank-chip,
+  .scroll-btn {
     transition: none;
+  }
+
+  .hot-rankings__list {
+    scroll-behavior: auto;
   }
 
   .rank-chip:hover {
     transform: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .hot-rankings__nav {
+    display: none;
   }
 }
 </style>
