@@ -13,6 +13,8 @@ import {
   RefreshCircle,
   Download,
   MusicalNotes,
+  VolumeHigh,
+  VolumeMute,
 } from '@vicons/ionicons5'
 
 interface Song {
@@ -33,6 +35,7 @@ const currentTime = inject<Ref<number>>('currentTime', ref(0))
 const duration = inject<Ref<number>>('duration', ref(0))
 const playlist = inject<Ref<Song[]>>('playlist', ref([]))
 const playMode = inject<Ref<string>>('playMode', ref('sequence'))
+const volume = inject<Ref<number>>('volume', ref(0.8))
 
 const playSong = inject<(song: Song) => void>('playSong', () => { })
 const togglePlay = inject<() => void>('togglePlay', () => { })
@@ -90,6 +93,24 @@ function formatTime(seconds: number): string {
 
 function handleSeek(value: number) {
   seekTo((value / 100) * duration.value)
+}
+
+// 音量控制
+const lastVolume = ref(volume.value || 0.8)
+const isMuted = computed(() => volume.value === 0)
+
+function handleVolume(value: number) {
+  volume.value = value
+  if (value > 0) lastVolume.value = value
+}
+
+function toggleMute() {
+  if (isMuted.value) {
+    volume.value = lastVolume.value || 0.8
+  } else {
+    lastVolume.value = volume.value
+    volume.value = 0
+  }
 }
 
 function close() {
@@ -188,33 +209,49 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
           <span class="fp-progress__time">{{ formatTime(duration) }}</span>
         </div>
 
-        <div class="fp-controls">
-          <button class="fp-btn" type="button" :title="playModeText" @click="togglePlayMode()">
-            <n-icon size="20">
-              <component :is="playModeIcon" />
-            </n-icon>
-          </button>
-          <button class="fp-btn" type="button" aria-label="上一首" @click="playPrev()">
-            <n-icon size="26">
-              <PlaySkipBack />
-            </n-icon>
-          </button>
-          <button class="fp-btn fp-btn--primary" type="button" :aria-label="isPlaying ? '暂停' : '播放'"
-            @click="togglePlay()">
-            <n-icon size="36">
-              <component :is="isPlaying ? PauseCircle : PlayCircle" />
-            </n-icon>
-          </button>
-          <button class="fp-btn" type="button" aria-label="下一首" @click="playNext()">
-            <n-icon size="26">
-              <PlaySkipForward />
-            </n-icon>
-          </button>
-          <button class="fp-btn" type="button" aria-label="下载歌曲" @click="downloadSong()">
-            <n-icon size="20">
-              <Download />
-            </n-icon>
-          </button>
+        <div class="fp-controls-row">
+          <div class="fp-controls">
+            <button class="fp-btn" type="button" :title="playModeText" @click="togglePlayMode()">
+              <n-icon size="20">
+                <component :is="playModeIcon" />
+              </n-icon>
+            </button>
+            <button class="fp-btn" type="button" aria-label="上一首" @click="playPrev()">
+              <n-icon size="26">
+                <PlaySkipBack />
+              </n-icon>
+            </button>
+            <button class="fp-btn fp-btn--primary" type="button" :aria-label="isPlaying ? '暂停' : '播放'"
+              @click="togglePlay()">
+              <n-icon size="36">
+                <component :is="isPlaying ? PauseCircle : PlayCircle" />
+              </n-icon>
+            </button>
+            <button class="fp-btn" type="button" aria-label="下一首" @click="playNext()">
+              <n-icon size="26">
+                <PlaySkipForward />
+              </n-icon>
+            </button>
+            <button class="fp-btn" type="button" aria-label="下载歌曲" @click="downloadSong()">
+              <n-icon size="20">
+                <Download />
+              </n-icon>
+            </button>
+          </div>
+
+          <!-- 音量控制 -->
+          <div class="fp-volume">
+            <button class="fp-btn" type="button" :aria-label="isMuted ? '取消静音' : '静音'" @click="toggleMute">
+              <n-icon size="20">
+                <component :is="isMuted ? VolumeMute : VolumeHigh" />
+              </n-icon>
+            </button>
+            <div class="fp-volume__track">
+              <div class="fp-volume__fill" :style="{ width: (volume * 100) + '%' }"></div>
+              <input class="fp-volume__range" type="range" min="0" max="1" step="0.01" :value="volume" aria-label="音量"
+                @input="handleVolume(Number(($event.target as HTMLInputElement).value))" />
+            </div>
+          </div>
         </div>
       </footer>
     </div>
@@ -555,10 +592,54 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
   cursor: pointer;
 }
 
+.fp-controls-row {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .fp-controls {
   display: flex;
   align-items: center;
   gap: 22px;
+}
+
+/* 音量控制：置于控制区右侧 */
+.fp-volume {
+  position: absolute;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 160px;
+}
+
+.fp-volume__track {
+  position: relative;
+  flex: 1;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.fp-volume__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #22c55e, #38bdf8);
+}
+
+.fp-volume__range {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .fp-btn {
@@ -629,6 +710,17 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 
   .fp-info__title {
     font-size: 20px;
+  }
+
+  /* 移动端：音量控件回到控制区下方单独一行 */
+  .fp-controls-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .fp-volume {
+    position: static;
+    width: min(320px, 80%);
   }
 }
 
