@@ -95,6 +95,10 @@ export const musicApi = {
     }),
   checkFavorite: (url: string) =>
     request(`/music/favorites/check?url=${encodeURIComponent(url)}`),
+  removeFavoriteByUrl: (url: string) =>
+    request(`/music/favorites/by-url?url=${encodeURIComponent(url)}`, {
+      method: "DELETE",
+    }),
 
   // ===== 收藏分组 =====
   getFavoriteGroups: () => request("/music/favorite-groups"),

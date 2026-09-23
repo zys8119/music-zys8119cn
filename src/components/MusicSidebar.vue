@@ -251,7 +251,7 @@ async function toggleFavorite(song: Song, event: Event) {
           </n-checkbox>
         </div>
 
-        <n-list class="flex-1 overflow-y-auto">
+        <n-list class="flex-1 overflow-y-auto playlist-list">
           <n-list-item v-for="song in filteredPlaylist" :key="song.id"
             class="cursor-pointer rounded transition-colors-300 group sidebar-song" :class="{
               'sidebar-song--active': isSongActive(song),
@@ -261,7 +261,7 @@ async function toggleFavorite(song: Song, event: Event) {
               <n-checkbox :checked="selectedSongs.has(song.id)" @click.stop="toggleSongSelection(song.id, $event)"
                 data-checkbox />
             </template>
-            <n-thing class="flex-1">
+            <n-thing class="flex-1 min-w-0">
               <template #header>
                 <div class="text-sm font-medium truncate sidebar-song__title">{{ song.title }}</div>
               </template>
@@ -348,13 +348,29 @@ async function toggleFavorite(song: Song, event: Event) {
   background: var(--app-surface-2);
 }
 
-/* 播放列表项 */
+/* 播放列表项：文字超出省略 */
 .sidebar-song__title {
   color: var(--app-text);
 }
 
 .sidebar-song__artist {
   color: var(--app-muted);
+}
+
+/* 打通 Naive UI 内部嵌套 flex 的宽度约束，让文字省略生效 */
+.sidebar-song :deep(.n-thing-main),
+.sidebar-song :deep(.n-thing-main__content),
+.sidebar-song :deep(.n-thing-header),
+.sidebar-song :deep(.n-thing-header__title),
+.sidebar-song :deep(.n-thing-main__description) {
+  min-width: 0;
+}
+
+.sidebar-song__title,
+.sidebar-song__artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sidebar-song--active {
@@ -365,9 +381,17 @@ async function toggleFavorite(song: Song, event: Event) {
   background: rgba(255, 77, 79, 0.12);
 }
 
+/* 播放列表区域左右内边距 */
+.playlist-list {
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
 /* 播放列表项美化 */
 :deep(.n-list-item) {
   border-radius: 10px;
+  padding-left: 12px;
+  padding-right: 12px;
   transition: background-color 0.2s ease, box-shadow 0.2s ease;
 }
 

@@ -114,12 +114,14 @@ export function removeFavorite(id: number) {
   db.prepare("DELETE FROM favorites WHERE id = ?").run(id);
 }
 
+// 按歌曲链接删除收藏（用于播放器爱心按钮取消收藏）
+export function removeFavoriteByUrl(url: string) {
+  db.prepare("DELETE FROM favorites WHERE song_key = ?").run(url);
+}
+
 // 移动收藏到分组
 export function moveFavorite(id: number, groupId: number | null) {
-  db.prepare("UPDATE favorites SET group_id = ? WHERE id = ?").run(
-    groupId,
-    id,
-  );
+  db.prepare("UPDATE favorites SET group_id = ? WHERE id = ?").run(groupId, id);
   return db.prepare("SELECT * FROM favorites WHERE id = ?").get(id);
 }
 
@@ -129,6 +131,13 @@ export function isFavorite(url: string) {
     .prepare("SELECT id FROM favorites WHERE song_key = ?")
     .get(url) as { id: number } | undefined;
   return !!row;
+}
+
+// 按歌曲链接获取收藏记录
+export function getFavoriteByUrl(url: string) {
+  return (
+    db.prepare("SELECT * FROM favorites WHERE song_key = ?").get(url) ?? null
+  );
 }
 
 // ---------------------------------------------------------------------------

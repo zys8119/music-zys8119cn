@@ -5,8 +5,10 @@ import {
   listFavorites,
   addFavorite,
   removeFavorite,
+  removeFavoriteByUrl,
   moveFavorite,
   isFavorite,
+  getFavoriteByUrl,
   listGroups,
   addGroup,
   removeGroup,
@@ -582,10 +584,19 @@ app.patch("/music/favorites/:id", (req: Request, res: Response) => {
   ok(res, moveFavorite(Number(req.params.id), groupId));
 });
 
-// 判断是否已收藏
+// 判断是否已收藏（返回收藏记录，便于取消收藏）
 app.get("/music/favorites/check", (req: Request, res: Response) => {
   const url = String(req.query.url || "");
-  ok(res, { favorite: isFavorite(url) });
+  const row = url ? getFavoriteByUrl(url) : null;
+  ok(res, { favorite: !!row, item: row });
+});
+
+// 按歌曲链接取消收藏（播放器爱心按钮）
+app.delete("/music/favorites/by-url", (req: Request, res: Response) => {
+  const url = String(req.query.url || "");
+  if (!url) return fail(res, "缺少 url 参数");
+  removeFavoriteByUrl(url);
+  ok(res, { success: true });
 });
 
 // ---------------------------------------------------------------------------
