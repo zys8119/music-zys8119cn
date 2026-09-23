@@ -18,9 +18,21 @@ const currentLyric = inject<Ref<string>>('currentLyric', ref(''))
 const currentTime = inject<Ref<number>>('currentTime', ref(0))
 const currentSong = inject<Ref<SongLike | null>>('currentSong', ref(null))
 const playerVisible = inject<Ref<boolean>>('playerVisible', ref(true))
+const seekTo = inject<(t: number) => void>('seekTo', () => { })
 
 const isOpen = ref(false)
 const listEl = ref<HTMLElement | null>(null)
+
+// 用户手动滚动/拖拽时暂停自动滚动，避免冲突
+const userScrollLock = ref(false)
+let scrollIdleTimer: number | null = null
+
+// 鼠标拖拽滚动状态
+const isDragging = ref(false)
+let dragStartY = 0
+let dragStartScrollTop = 0
+// 本次按住是否发生位移（用于区分拖拽与点击）
+let dragMoved = false
 
 // 解析 LRC 文本为按时间升序的行列表
 const lines = computed<LyricLine[]>(() => {
@@ -50,18 +62,103 @@ const activeIndex = computed(() => {
     return idx
 })
 
-// 高亮行变化时滚动到视图中间
-watch(activeIndex, async (idx) => {
-    if (!isOpen.value || idx < 0) return
-    await nextTick()
+// 将指定行滚动到容器中间
+function scrollToLine(idx: number) {
     const container = listEl.value
     const el = container?.children[idx] as HTMLElement | undefined
-    if (container && el) {
-        container.scrollTo({
-            top: el.offsetTop - container.clientHeight / 2 + el.clientHeight / 2,
-            behavior: 'smooth',
-        })
+    if (!container || !el) return
+    const containerRect = container.getBoundingClientRect()
+    const elRect = el.getBoundingClientRect()
+    const elCenter = elRect.top - containerRect.top + container.scrollTop + elRect.height / 2
+    container.scrollTo({
+        top: elCenter - container.clientHeight / 2,
+        behavior: 'smooth',
+    })
+}
+
+// 用户手动滚动：暂停自动滚动，停止后重新居中当前激活行
+function pauseAutoScroll() {
+    userScrollLock.value = true
+    if (scrollIdleTimer !== null) clearTimeout(scrollIdleTimer)
+    scrollIdleTimer = window.setTimeout(() => {
+        userScrollLock.value = false
+        if (isOpen.value && activeIndex.value >= 0) scrollToLine(activeIndex.value)
+    }, 1200)
+}
+
+// 鼠标离开歌词区域：立即将当前激活行重新居中
+function onListLeave() {
+    if (isDragging.value) return
+    if (scrollIdleTimer !== null) {
+        clearTimeout(scrollIdleTimer)
+        scrollIdleTimer = null
     }
+    userScrollLock.value = false
+    if (isOpen.value && activeIndex.value >= 0) scrollToLine(activeIndex.value)
+}
+
+// ===== 鼠标拖拽滚动 =====
+function onDragStart(e: MouseEvent) {
+    const container = listEl.value
+    if (!container || e.button !== 0) return
+    isDragging.value = true
+    dragMoved = false
+    dragStartY = e.clientY
+    dragStartScrollTop = container.scrollTop
+    userScrollLock.value = true
+    if (scrollIdleTimer !== null) {
+        clearTimeout(scrollIdleTimer)
+        scrollIdleTimer = null
+    }
+    container.style.scrollBehavior = 'auto'
+    window.addEventListener('mousemove', onDragMove)
+    window.addEventListener('mouseup', onDragEnd)
+}
+
+function onDragMove(e: MouseEvent) {
+    const container = listEl.value
+    if (!container || !isDragging.value) return
+    const delta = e.clientY - dragStartY
+    if (Math.abs(delta) > 3) dragMoved = true
+    container.scrollTop = dragStartScrollTop - delta
+    e.preventDefault()
+}
+
+function onDragEnd() {
+    const container = listEl.value
+    isDragging.value = false
+    window.removeEventListener('mousemove', onDragMove)
+    window.removeEventListener('mouseup', onDragEnd)
+    if (container) container.style.scrollBehavior = ''
+    if (dragMoved) pauseAutoScroll()
+    setTimeout(() => {
+        dragMoved = false
+    }, 0)
+}
+
+// 点击歌词跳转到对应进度（拖拽结束后的 click 不触发）
+function seekToLine(line: LyricLine) {
+    if (dragMoved) return
+    seekTo(line.time)
+    userScrollLock.value = false
+    if (scrollIdleTimer !== null) {
+        clearTimeout(scrollIdleTimer)
+        scrollIdleTimer = null
+    }
+}
+
+// 高亮行变化时滚动到视图中间（用户手动滚动期间不打扰）
+watch(activeIndex, async (idx) => {
+    if (!isOpen.value || idx < 0 || userScrollLock.value) return
+    await nextTick()
+    scrollToLine(idx)
+})
+
+// 展开面板时定位到当前行
+watch(isOpen, async (open) => {
+    if (!open) return
+    await nextTick()
+    if (activeIndex.value >= 0) scrollToLine(activeIndex.value)
 })
 
 // 切歌时重置滚动位置
@@ -72,6 +169,12 @@ watch(currentLyric, () => {
 function toggle() {
     isOpen.value = !isOpen.value
 }
+
+onBeforeUnmount(() => {
+    window.removeEventListener('mousemove', onDragMove)
+    window.removeEventListener('mouseup', onDragEnd)
+    if (scrollIdleTimer !== null) clearTimeout(scrollIdleTimer)
+})
 </script>
 
 <template>
@@ -82,9 +185,11 @@ function toggle() {
                 <div class="lyrics-title">{{ currentSong?.title || '暂无歌曲' }}</div>
                 <div class="lyrics-artist">{{ currentSong?.artist }}</div>
             </div>
-            <div v-if="lines.length" ref="listEl" class="lyrics-list">
+            <div v-if="lines.length" ref="listEl" class="lyrics-list" :class="{ 'lyrics-list--dragging': isDragging }"
+                @wheel="pauseAutoScroll" @touchmove="pauseAutoScroll" @mouseleave="onListLeave"
+                @mousedown="onDragStart">
                 <p v-for="(line, idx) in lines" :key="idx" class="lyrics-line"
-                    :class="{ 'lyrics-line--active': idx === activeIndex }">
+                    :class="{ 'lyrics-line--active': idx === activeIndex }" @click="seekToLine(line)">
                     {{ line.text }}
                 </p>
             </div>
@@ -190,6 +295,13 @@ function toggle() {
     overflow-y: auto;
     scroll-behavior: smooth;
     text-align: center;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.lyrics-list--dragging {
+    cursor: grabbing;
 }
 
 .lyrics-line {
@@ -198,7 +310,15 @@ function toggle() {
     font-size: 14px;
     line-height: 1.5;
     color: #6b7280;
-    transition: color 0.2s ease, transform 0.2s ease, font-weight 0.2s ease;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: color 0.2s ease, background-color 0.2s ease, transform 0.2s ease,
+        font-weight 0.2s ease;
+}
+
+.lyrics-line:hover {
+    color: #374151;
+    background: rgba(0, 0, 0, 0.04);
 }
 
 .lyrics-line--active {
