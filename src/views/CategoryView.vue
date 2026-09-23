@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NList, NListItem, NThing, NEmpty, NCard, NGrid, NGridItem } from 'naive-ui'
+import { NList, NListItem, NThing, NEmpty, NCard, NGrid, NGridItem, NCheckbox, NButton, NIcon } from 'naive-ui'
+import { PlayCircleOutline } from '@vicons/ionicons5'
 import { musicApi } from '../services/api'
 
 interface Song {
@@ -112,15 +113,7 @@ function fetchList() {
 // 点击列表项：歌曲/MV 直接播放，歌手/歌单/电台 下钻到对应列表
 function handleItemClick(item: ListItem, index: number) {
   if (item.type === 'song' || item.type === 'mv') {
-    const song: Song = {
-      id: index + 1000,
-      title: item.name,
-      artist: categoryName.value,
-      cover: item.img,
-      url: item.url,
-      category: categoryId.value
-    }
-    addSongsToPlaylist([song])
+    addSongsToPlaylist([toSong(item, index)])
     return
   }
 
@@ -135,6 +128,72 @@ function handlePageClick(link: PageLink, event: Event) {
   loadList(link.url)
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
+
+// ===== 多选 / 全选 =====
+// 是否仅歌曲/MV 可选中（歌手/歌单/电台为下钻类目，不支持批量播放）
+const isPlayable = computed(() => pageType.value !== 'singer' && pageType.value !== 'playlist' && pageType.value !== 'radio')
+
+// 已选中的行索引
+const selectedIndexes = ref<Set<number>>(new Set())
+
+const isAllSelected = computed(() =>
+  listItems.value.length > 0 && selectedIndexes.value.size === listItems.value.length
+)
+
+const isIndeterminate = computed(() =>
+  selectedIndexes.value.size > 0 && selectedIndexes.value.size < listItems.value.length
+)
+
+// 行是否被选中
+function isSelected(index: number): boolean {
+  return selectedIndexes.value.has(index)
+}
+
+// 切换单行选中状态
+function toggleSelect(index: number, event: Event) {
+  event.stopPropagation()
+  const next = new Set(selectedIndexes.value)
+  if (next.has(index)) next.delete(index)
+  else next.add(index)
+  selectedIndexes.value = next
+}
+
+// 全选 / 取消全选
+function toggleSelectAll() {
+  if (isAllSelected.value) {
+    selectedIndexes.value = new Set()
+  } else {
+    selectedIndexes.value = new Set(listItems.value.map((_, i) => i))
+  }
+}
+
+// 将列表项转换为可播放歌曲
+function toSong(item: ListItem, index: number): Song {
+  return {
+    id: index + 1000,
+    title: item.name,
+    artist: categoryName.value,
+    cover: item.img,
+    url: item.url,
+    category: categoryId.value,
+  }
+}
+
+// 播放选中的歌曲（按列表顺序）
+function playSelected() {
+  if (selectedIndexes.value.size === 0) return
+  const songs = listItems.value
+    .map((item, index) => ({ item, index }))
+    .filter(({ index }) => selectedIndexes.value.has(index))
+    .map(({ item, index }) => toSong(item, index))
+  addSongsToPlaylist(songs)
+  selectedIndexes.value = new Set()
+}
+
+// 列表数据变化时清空选中（切换分类/分页/下钻）
+watch(listItems, () => {
+  selectedIndexes.value = new Set()
+})
 
 watch(targetUrl, () => {
   fetchList()
@@ -204,30 +263,50 @@ onMounted(() => {
       </n-grid>
     </div>
 
-    <!-- 歌曲/榜单/MV：列表 -->
-    <n-list v-else hoverable clickable class="song-list">
-      <n-list-item v-for="(item, index) in listItems" :key="index" @click="handleItemClick(item, index)">
-        <n-thing>
-          <template #avatar>
-            <img v-if="item.img" :src="item.img" class="song-avatar" alt="cover" />
-            <div v-else class="hot-song-avatar">🎵</div>
+    <!-- 歌曲/榜单/MV：列表（支持全选/多选播放） -->
+    <template v-else>
+      <div v-if="isPlayable" class="list-toolbar">
+        <n-checkbox :checked="isAllSelected" :indeterminate="isIndeterminate" @update:checked="toggleSelectAll">
+          全选<span v-if="selectedIndexes.size > 0" class="toolbar-count">已选 {{ selectedIndexes.size }} 首</span>
+        </n-checkbox>
+        <n-button type="primary" size="small" :disabled="selectedIndexes.size === 0" @click="playSelected">
+          <template #icon>
+            <n-icon>
+              <PlayCircleOutline />
+            </n-icon>
           </template>
-          <template #header>
-            <span class="song-title">{{ item.name }}</span>
+          播放选中
+        </n-button>
+      </div>
+
+      <n-list hoverable clickable class="song-list">
+        <n-list-item v-for="(item, index) in listItems" :key="index"
+          :class="{ 'list-item--selected': isSelected(index) }" @click="handleItemClick(item, index)">
+          <template v-if="isPlayable" #prefix>
+            <n-checkbox :checked="isSelected(index)" @click.stop="toggleSelect(index, $event)" />
           </template>
-          <template #description>
-            <span class="song-url">{{ item.url }}</span>
-          </template>
-        </n-thing>
-      </n-list-item>
-    </n-list>
+          <n-thing>
+            <template #avatar>
+              <img v-if="item.img" :src="item.img" class="song-avatar" alt="cover" />
+              <div v-else class="hot-song-avatar">🎵</div>
+            </template>
+            <template #header>
+              <span class="song-title">{{ item.name }}</span>
+            </template>
+            <template #description>
+              <span class="song-url">{{ item.url }}</span>
+            </template>
+          </n-thing>
+        </n-list-item>
+      </n-list>
+    </template>
 
     <!-- 分页：完全参考站点 .page 结构（首页 / 上一页 / 页码 / 下一页 / 尾页） -->
     <nav v-if="!isLoading && listItems.length > 0 && pagination.items.length > 0" class="page" aria-label="分页导航">
       <template v-for="(link, idx) in pagination.items" :key="`${link.label}-${idx}`">
         <span v-if="link.current" class="page-link current" aria-current="page">{{ link.label }}</span>
         <a v-else-if="link.url" class="page-link" :href="link.url" @click="handlePageClick(link, $event)">{{ link.label
-          }}</a>
+        }}</a>
         <span v-else class="page-link disabled">{{ link.label }}</span>
       </template>
     </nav>
@@ -375,6 +454,32 @@ onMounted(() => {
 
 .song-list {
   margin-top: 4px;
+}
+
+/* 列表工具栏（全选 + 播放选中） */
+.list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 10px rgba(31, 45, 61, 0.04);
+}
+
+.toolbar-count {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #1890ff;
+}
+
+/* 选中行高亮 */
+.song-list :deep(.n-list-item.list-item--selected) {
+  background: linear-gradient(90deg, #eef6ff, #f6efff);
+  box-shadow: inset 0 0 0 1px rgba(24, 144, 255, 0.25);
 }
 
 .song-list :deep(.n-list-item) {
