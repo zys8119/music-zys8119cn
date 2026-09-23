@@ -207,14 +207,14 @@ async function toggleFavorite(song: Song, event: Event) {
 
 <template>
   <n-layout-sider bordered collapse-mode="width" :collapsed-width="64" :width="240" :native-scrollbar="false"
-    class="sidebar h-100vh flex flex-col">
-    <div class="flex flex-col h-full pt-16">
+    class="sidebar h-full flex flex-col">
+    <div class="flex flex-col h-full min-h-0 pt-16">
       <div class="flex-shrink-0">
         <n-menu :value="activeKey" :options="menuOptions" :collapsed-width="64" :collapsed-icon-size="22"
           @update:value="handleMenuClick" />
       </div>
 
-      <div class="flex-1 flex flex-col overflow-hidden px-4 mt-4">
+      <div class="flex-1 flex flex-col min-h-0 overflow-hidden px-4 mt-4">
         <div class="list-header">
           <h3 class="list-title">播放列表</h3>
           <n-button size="small" type="error" @click="clearPlaylist" :disabled="filteredPlaylist.length === 0">
@@ -300,11 +300,26 @@ async function toggleFavorite(song: Song, event: Event) {
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
+/* 覆盖 Naive UI sider 自带背景，避免出现黑色背景 */
+.sidebar :deep(.n-layout-sider-scroll-container) {
+  background: transparent;
+  /* 不整体滚动，交由内部播放列表滚动 */
+  overflow: hidden;
+  height: 100%;
+}
+
+:deep(.n-layout-sider) {
+  --n-color: transparent !important;
+  --n-color-embedded: transparent !important;
+  background: transparent;
+}
+
 .list-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+  flex-shrink: 0;
 }
 
 .list-title {

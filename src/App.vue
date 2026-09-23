@@ -477,7 +477,7 @@ provide('downloadSong', downloadSong)
       <div class="h-100vh flex flex-col overflow-hidden">
         <MusicHeader :categories="categories" :current-category="currentCategory"
           @change-category="handleCategoryChange" />
-        <n-layout class="flex-1 overflow-hidden" has-sider>
+        <n-layout class="flex-1 overflow-hidden app-layout" has-sider>
           <MusicSidebar :playlist="playlist" :current-song="currentSong" :categories="categories"
             :current-category="currentCategory" @play-song="playSong" @change-category="handleCategoryChange"
             @remove-songs="removeSongs" @clear-playlist="clearPlaylist" />
@@ -498,6 +498,16 @@ provide('downloadSong', downloadSong)
 </template>
 
 <style scoped>
+/* 内容区布局使用主题背景，覆盖 Naive UI 默认色 */
+.app-layout {
+  --n-color: transparent !important;
+  background: transparent;
+}
+
+.app-layout :deep(.n-layout-scroll-container) {
+  background: transparent;
+}
+
 /* 隐藏滚动条但保持滚动功能 */
 .scrollbar-hide {
   scrollbar-width: none;
