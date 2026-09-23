@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, ref, type Ref } from 'vue'
+import { computed, inject, nextTick, ref, watch, type Ref } from 'vue'
 import { NIcon } from 'naive-ui'
 import {
   ChevronDownOutline,
@@ -185,6 +185,34 @@ function isCurrent(song: Song): boolean {
   if (!cur) return false
   return songKeyOf(cur) === songKeyOf(song)
 }
+
+// 将当前激活的歌曲居中显示在播放列表可视区域
+function scrollToActiveSong(behavior: ScrollBehavior = 'smooth') {
+  const container = listEl.value
+  if (!container) return
+  const idx = playlist.value.findIndex(song => isCurrent(song))
+  if (idx < 0) return
+  const el = container.children[idx] as HTMLElement | undefined
+  if (!el) return
+  const containerRect = container.getBoundingClientRect()
+  const elRect = el.getBoundingClientRect()
+  // 目标项中心相对容器内容顶部的距离
+  const elCenter = elRect.top - containerRect.top + container.scrollTop + elRect.height / 2
+  container.scrollTo({
+    top: elCenter - container.clientHeight / 2,
+    behavior,
+  })
+}
+
+// 播放列表或当前歌曲变化时，自动将激活项居中
+watch(
+  [() => playlist.value.length, () => (currentSong.value ? songKeyOf(currentSong.value) : ''), fullscreenOpen],
+  async () => {
+    if (!fullscreenOpen.value) return
+    await nextTick()
+    scrollToActiveSong()
+  }
+)
 
 // ===== 歌词 =====
 const currentLyric = inject<Ref<string>>('currentLyric', ref(''))

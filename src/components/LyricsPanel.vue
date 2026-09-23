@@ -62,6 +62,13 @@ const activeIndex = computed(() => {
     return idx
 })
 
+// 当前激活歌词文本（用于在触发按钮上实时展示）
+const activeLineText = computed(() => {
+    const idx = activeIndex.value
+    if (idx < 0) return ''
+    return lines.value[idx]?.text || ''
+})
+
 // 将指定行滚动到容器中间
 function scrollToLine(idx: number) {
     const container = listEl.value
