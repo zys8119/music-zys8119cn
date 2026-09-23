@@ -315,7 +315,7 @@ onMounted(() => {
       <template v-for="(link, idx) in pagination.items" :key="`${link.label}-${idx}`">
         <span v-if="link.current" class="page-link current" aria-current="page">{{ link.label }}</span>
         <a v-else-if="link.url" class="page-link" :href="link.url" @click="handlePageClick(link, $event)">{{ link.label
-          }}</a>
+        }}</a>
         <span v-else class="page-link disabled">{{ link.label }}</span>
       </template>
     </nav>
@@ -567,7 +567,7 @@ html.dark .song-list :deep(.n-list-item.list-item--selected) {
 
 .singer-card:hover {
   transform: translateY(-4px);
-  background-color: #f8fafc;
+  background-color: var(--app-hover);
 }
 
 .singer-avatar {
@@ -577,7 +577,7 @@ html.dark .song-list :deep(.n-list-item.list-item--selected) {
   overflow: hidden;
   margin-bottom: 10px;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
-  border: 2px solid #fff;
+  border: 2px solid var(--app-surface);
   transition: box-shadow 0.24s ease;
 }
 
