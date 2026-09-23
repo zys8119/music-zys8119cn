@@ -91,7 +91,7 @@ const duration = computed(() => globalDuration.value || localDuration.value)
 
 const progress = computed(() => {
   if (duration.value === 0) return 0
-  return (currentTime.value / duration.value) * 100
+  return Math.round((currentTime.value / duration.value) * 100)
 })
 
 const formattedCurrentTime = computed(() => formatTime(currentTime.value))
