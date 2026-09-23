@@ -35,7 +35,8 @@ const emit = defineEmits<{
   'clear-playlist': [];
 }>()
 
-const menuOptions = [
+// 菜单项：分类子项需随异步加载的分类动态更新
+const menuOptions = computed(() => [
   {
     label: '发现音乐',
     key: 'discover',
@@ -65,7 +66,7 @@ const menuOptions = [
       key: `category-${category.id}`,
     }))
   }
-]
+])
 
 const activeKey = computed(() => {
   const path = route.path
@@ -79,8 +80,8 @@ const activeKey = computed(() => {
 const handleMenuClick = (key: string): void => {
   if (key.startsWith('category-')) {
     const categoryId = Number(key.split('-')[1])
+    // 交由父组件统一处理分类跳转
     emit('change-category', categoryId)
-    router.push({ name: 'category', params: { id: categoryId.toString() } })
   } else {
     router.push({ name: key })
   }
@@ -110,8 +111,8 @@ const selectedSongs = ref<Set<number>>(new Set())
 
 // 全选状态
 const isAllSelected = computed(() => {
-  return filteredPlaylist.value.length > 0 && 
-         filteredPlaylist.value.every(song => selectedSongs.value.has(song.id))
+  return filteredPlaylist.value.length > 0 &&
+    filteredPlaylist.value.every(song => selectedSongs.value.has(song.id))
 })
 
 const isIndeterminate = computed(() => {
@@ -175,7 +176,7 @@ const handleSongItemClick = (song: Song, event: Event) => {
 
 <template>
   <n-layout-sider bordered collapse-mode="width" :collapsed-width="64" :width="240" :native-scrollbar="false"
-    class="h-100vh bg-white border-r border-gray-200 flex flex-col">
+    class="sidebar h-100vh flex flex-col">
     <div class="flex flex-col h-full pt-16">
       <div class="flex-shrink-0">
         <n-menu :value="activeKey" :options="menuOptions" :collapsed-width="64" :collapsed-icon-size="22"
@@ -183,16 +184,13 @@ const handleSongItemClick = (song: Song, event: Event) => {
       </div>
 
       <div class="flex-1 flex flex-col overflow-hidden px-4 mt-4">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="m-0 text-base text-gray-800">播放列表</h3>
-          <n-button
-            size="small"
-            type="error"
-            @click="clearPlaylist"
-            :disabled="filteredPlaylist.length === 0"
-          >
+        <div class="list-header">
+          <h3 class="list-title">播放列表</h3>
+          <n-button size="small" type="error" @click="clearPlaylist" :disabled="filteredPlaylist.length === 0">
             <template #icon>
-              <n-icon><TrashOutline /></n-icon>
+              <n-icon>
+                <TrashOutline />
+              </n-icon>
             </template>
             清空
           </n-button>
@@ -201,51 +199,36 @@ const handleSongItemClick = (song: Song, event: Event) => {
         <!-- 批量操作栏 -->
         <div v-if="selectedSongs.size > 0" class="flex justify-between items-center mb-3 p-2 bg-gray-50 rounded">
           <div class="flex items-center gap-2">
-            <n-checkbox
-              :checked="isAllSelected"
-              :indeterminate="isIndeterminate"
-              @update:checked="toggleSelectAll"
-            >
+            <n-checkbox :checked="isAllSelected" :indeterminate="isIndeterminate" @update:checked="toggleSelectAll">
               全选 ({{ selectedSongs.size }}/{{ filteredPlaylist.length }})
             </n-checkbox>
           </div>
-          <n-button
-            size="small"
-            type="error"
-            @click="removeSelectedSongs"
-          >
+          <n-button size="small" type="error" @click="removeSelectedSongs">
             <template #icon>
-              <n-icon><TrashOutline /></n-icon>
+              <n-icon>
+                <TrashOutline />
+              </n-icon>
             </template>
             删除选中
           </n-button>
         </div>
-        
+
         <!-- 全选操作 -->
         <div v-else-if="filteredPlaylist.length > 0" class="flex items-center mb-3">
-          <n-checkbox
-            :checked="isAllSelected"
-            :indeterminate="isIndeterminate"
-            @update:checked="toggleSelectAll"
-          >
+          <n-checkbox :checked="isAllSelected" :indeterminate="isIndeterminate" @update:checked="toggleSelectAll">
             全选
           </n-checkbox>
         </div>
 
         <n-list class="flex-1 overflow-y-auto">
           <n-list-item v-for="song in filteredPlaylist" :key="song.id"
-            class="cursor-pointer rounded transition-colors-300 hover:bg-gray-50 group"
-            :class="{ 
+            class="cursor-pointer rounded transition-colors-300 hover:bg-gray-50 group" :class="{
               'bg-blue-50': isSongActive(song),
               'bg-red-50': selectedSongs.has(song.id)
-            }" 
-            @click="handleSongItemClick(song, $event)">
+            }" @click="handleSongItemClick(song, $event)">
             <template #prefix>
-              <n-checkbox
-                :checked="selectedSongs.has(song.id)"
-                @click.stop="toggleSongSelection(song.id, $event)"
-                data-checkbox
-              />
+              <n-checkbox :checked="selectedSongs.has(song.id)" @click.stop="toggleSongSelection(song.id, $event)"
+                data-checkbox />
             </template>
             <n-thing class="flex-1">
               <template #header>
@@ -256,15 +239,12 @@ const handleSongItemClick = (song: Song, event: Event) => {
               </template>
             </n-thing>
             <template #suffix>
-              <n-button
-                size="small"
-                type="error"
-                quaternary
-                class="opacity-0 group-hover:opacity-100 transition-opacity"
-                @click="removeSingleSong(song.id, $event)"
-              >
+              <n-button size="small" type="error" quaternary
+                class="opacity-0 group-hover:opacity-100 transition-opacity" @click="removeSingleSong(song.id, $event)">
                 <template #icon>
-                  <n-icon><TrashOutline /></n-icon>
+                  <n-icon>
+                    <TrashOutline />
+                  </n-icon>
                 </template>
               </n-button>
             </template>
@@ -276,5 +256,47 @@ const handleSongItemClick = (song: Song, event: Event) => {
 </template>
 
 <style scoped>
-/* UnoCSS classes are used in template, minimal custom styles if needed */
+.sidebar {
+  background: #fff;
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.list-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2937;
+  position: relative;
+  padding-left: 10px;
+}
+
+.list-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #1890ff, #722ed1);
+}
+
+/* 播放列表项美化 */
+:deep(.n-list-item) {
+  border-radius: 10px;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+:deep(.n-list-item:hover) {
+  background-color: #f7f9fc;
+  box-shadow: inset 0 0 0 1px rgba(24, 144, 255, 0.12);
+}
 </style>

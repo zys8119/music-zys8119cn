@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { h } from 'vue'
-import { 
-  Search, 
-  MusicalNotes, 
+import {
+  Search,
+  MusicalNotes,
   Home,
   TrendingUp,
   Flash,
@@ -14,11 +13,8 @@ import {
 interface Category {
   id: number;
   name: string;
-}
-
-interface HotListCategory {
-  url: string;
-  name: string;
+  url?: string;
+  type?: string;
 }
 
 const router = useRouter()
@@ -26,39 +22,32 @@ const router = useRouter()
 const props = defineProps<{
   categories: Category[];
   currentCategory: number | null;
-  hotListCategories: HotListCategory[];
-  showHotListDropdown: boolean;
 }>()
 
 const emit = defineEmits<{
   'change-category': [categoryId: number];
-  'hot-list-category-click': [category: HotListCategory];
 }>()
 
 const handleCategoryChange = (categoryId: number): void => {
+  // 仅通知父组件统一处理跳转（父组件会携带目标站点 URL/类型）
   emit('change-category', categoryId)
-  router.push({ name: 'category', params: { id: categoryId.toString() } })
-}
-
-const handleHotListCategoryClick = (category: HotListCategory): void => {
-  emit('hot-list-category-click', category)
 }
 
 const goToHome = (): void => {
   router.push({ name: 'home' })
 }
 
-// 为每个分类定义对应的图标
-const getCategoryIcon = (categoryId: number) => {
-  const iconMap: Record<number, any> = {
-    1: TrendingUp, // 流行
-    2: Flash,      // 摇滚
-    3: Flash,      // 电子
-    4: Library,    // 古典
-    5: Cafe,       // 爵士
-    6: Leaf        // 民谣
+// 依据真实导航类型匹配图标
+const getCategoryIcon = (category: Category) => {
+  const iconMap: Record<string, any> = {
+    home: Home,        // 首页
+    rank: TrendingUp,  // 榜单
+    singer: Library,   // 歌手
+    playlist: Cafe,    // 歌单
+    radio: Flash,      // 电台
+    mv: Leaf           // 高清MV
   }
-  return iconMap[categoryId] || Home
+  return iconMap[category.type || ''] || Home
 }
 </script>
 
@@ -72,12 +61,7 @@ const getCategoryIcon = (categoryId: number) => {
         <span class="logo-text" @click="goToHome">音乐播放器</span>
       </div>
       <div class="search-container">
-        <n-input
-          placeholder="搜索歌曲、歌手或专辑"
-          round
-          clearable
-          class="search-input"
-        >
+        <n-input placeholder="搜索歌曲、歌手或专辑" round clearable class="search-input">
           <template #prefix>
             <n-icon>
               <search />
@@ -87,34 +71,13 @@ const getCategoryIcon = (categoryId: number) => {
       </div>
       <div class="nav-menu">
         <div v-if="categories.length > 0" class="nav-icons">
-          <div 
-            v-for="category in categories" 
-            :key="category.id"
-            class="nav-item"
-            :class="{ 'nav-item--active': currentCategory === category.id }"
-            @click="handleCategoryChange(category.id)"
-            :title="category.name"
-          >
+          <div v-for="category in categories" :key="category.id" class="nav-item"
+            :class="{ 'nav-item--active': currentCategory === category.id }" @click="handleCategoryChange(category.id)"
+            :title="category.name">
             <n-icon size="20">
-              <component :is="getCategoryIcon(category.id)" />
+              <component :is="getCategoryIcon(category)" />
             </n-icon>
             <span class="nav-label">{{ category.name }}</span>
-            
-            <!-- 热门榜单二级分类下拉菜单 -->
-            <div 
-              v-if="category.id === 1 && showHotListDropdown && hotListCategories.length > 0"
-              class="hot-list-dropdown"
-              @click.stop
-            >
-              <div 
-                v-for="hotCategory in hotListCategories"
-                :key="hotCategory.name"
-                class="hot-list-item"
-                @click="handleHotListCategoryClick(hotCategory)"
-              >
-                {{ hotCategory.name }}
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -123,21 +86,39 @@ const getCategoryIcon = (categoryId: number) => {
           <n-button quaternary circle>
             <template #icon>
               <n-icon>
-                <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2zm0 16.5c-3.31 0-6-2.69-6-6s2.69-6 6-6s6 2.69 6 6s-2.69 6-6 6z"></path><circle cx="12" cy="12.5" r="2"></circle></g></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24">
+                  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path
+                      d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2zm0 16.5c-3.31 0-6-2.69-6-6s2.69-6 6-6s6 2.69 6 6s-2.69 6-6 6z">
+                    </path>
+                    <circle cx="12" cy="12.5" r="2"></circle>
+                  </g>
+                </svg>
               </n-icon>
             </template>
           </n-button>
           <n-button quaternary circle>
             <template #icon>
               <n-icon>
-                <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 0 0-9 9v7c0 1.66 1.34 3 3 3h12c1.66 0 3-1.34 3-3v-7a9 9 0 0 0-9-9z"></path><path d="M10 21v-5a2 2 0 1 1 4 0v5"></path></g></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24">
+                  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3a9 9 0 0 0-9 9v7c0 1.66 1.34 3 3 3h12c1.66 0 3-1.34 3-3v-7a9 9 0 0 0-9-9z"></path>
+                    <path d="M10 21v-5a2 2 0 1 1 4 0v5"></path>
+                  </g>
+                </svg>
               </n-icon>
             </template>
           </n-button>
           <n-button quaternary circle>
             <template #icon>
               <n-icon>
-                <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></g></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24">
+                  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="1"></circle>
+                    <circle cx="19" cy="12" r="1"></circle>
+                    <circle cx="5" cy="12" r="1"></circle>
+                  </g>
+                </svg>
               </n-icon>
             </template>
           </n-button>
@@ -154,9 +135,12 @@ const getCategoryIcon = (categoryId: number) => {
   left: 0;
   right: 0;
   z-index: 100;
-  background-color: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   height: 64px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 12px rgba(31, 45, 61, 0.06);
 }
 
 .header-content {
@@ -164,39 +148,46 @@ const getCategoryIcon = (categoryId: number) => {
   align-items: center;
   height: 100%;
   padding: 0 24px;
+  gap: 8px;
 }
 
 .logo {
   display: flex;
   align-items: center;
-  margin-right: 48px;
+  margin-right: 32px;
+  flex-shrink: 0;
 }
 
 .logo-text {
-  margin-left: 8px;
+  margin-left: 10px;
   font-size: 18px;
-  font-weight: 600;
-  color: #333;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  background: linear-gradient(120deg, #1890ff, #722ed1);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
   cursor: pointer;
-  transition: color 0.2s ease;
+  transition: opacity 0.2s ease;
 }
 
 .logo-text:hover {
-  color: #1890ff;
+  opacity: 0.75;
 }
 
 .search-container {
-  width: 300px;
+  width: 280px;
   margin-right: auto;
+  flex-shrink: 1;
 }
 
 .nav-menu {
-  margin-right: 24px;
+  margin-right: 8px;
 }
 
 .nav-icons {
   display: flex;
-  gap: 8px;
+  gap: 4px;
 }
 
 .nav-item {
@@ -204,32 +195,34 @@ const getCategoryIcon = (categoryId: number) => {
   flex-direction: column;
   align-items: center;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  color: #4b5563;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 }
 
 .nav-item:hover {
-  background-color: #f5f5f5;
-  transform: translateY(-1px);
+  background-color: #f2f6ff;
+  color: #1890ff;
+  transform: translateY(-2px);
 }
 
 .nav-item--active {
-  background-color: #e6f7ff;
+  background: linear-gradient(135deg, #e8f3ff, #f0e9ff);
   color: #1890ff;
 }
 
 .nav-item--active::after {
   content: '';
   position: absolute;
-  bottom: 0;
+  bottom: 2px;
   left: 50%;
   transform: translateX(-50%);
-  width: 20px;
-  height: 2px;
-  background-color: #1890ff;
-  border-radius: 1px;
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #1890ff, #722ed1);
 }
 
 .nav-label {
@@ -243,44 +236,17 @@ const getCategoryIcon = (categoryId: number) => {
 }
 
 .user-actions {
-  margin-left: 16px;
+  margin-left: 8px;
+  flex-shrink: 0;
 }
 
-/* 热门榜单下拉菜单样式 */
-.hot-list-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
-  margin-top: 4px;
-  min-width: 120px;
-  overflow: hidden;
+.user-actions :deep(.n-button) {
+  color: #6b7280;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
 
-.hot-list-item {
-  padding: 8px 12px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  font-size: 13px;
-  color: #333;
-  white-space: nowrap;
-}
-
-.hot-list-item:hover {
-  background-color: #f5f5f5;
-}
-
-.hot-list-item:active {
-  background-color: #e6f7ff;
+.user-actions :deep(.n-button:hover) {
   color: #1890ff;
-}
-
-/* 确保热门榜单导航项有相对定位 */
-.nav-item {
-  position: relative;
+  background-color: #f2f6ff;
 }
 </style>

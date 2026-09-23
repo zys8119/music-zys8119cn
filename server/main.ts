@@ -179,21 +179,113 @@ function parseSongList(html: string) {
   return list;
 }
 
-// 热门榜单分类：取导航中指向 /list/ 的榜单入口
-function parseHotListCategories(html: string) {
+// 导航分类：解析目标站点顶部导航（首页/新歌榜/TOP榜单/DJ舞曲/歌手/歌单/电台/高清MV）
+function parseNavCategories(html: string) {
   const $ = cheerio.load(html);
-  const list: Array<{ url: string; name: string }> = [];
+  const list: Array<{ id: number; name: string; url: string; type: string }> =
+    [];
   const seen = new Set<string>();
   $(".nav ul li a").each((_, a) => {
     const href = $(a).attr("href") || "";
-    if (!href.includes("/list/")) return;
+    if (!href) return;
     const name = $(a).text().trim();
+    const url = absUrl(href);
+    if (!name || seen.has(url)) return;
+    seen.add(url);
+    list.push({ id: list.length + 1, name, url, type: detectPageType(href) });
+  });
+  return list;
+}
+
+// 根据链接判断条目/页面类型
+type ItemType =
+  | "home"
+  | "rank"
+  | "song"
+  | "mv"
+  | "singer"
+  | "playlist"
+  | "radio"
+  | "list";
+
+function detectItemType(href: string): ItemType | null {
+  if (href.startsWith("/mp3/")) return "song";
+  if (href.startsWith("/mp4/")) return "mv";
+  if (href.startsWith("/singer/")) return "singer";
+  if (href.startsWith("/playlist/")) return "playlist";
+  if (href.startsWith("/radio/")) return "radio";
+  return null;
+}
+
+// 判断导航项对应的页面类型
+function detectPageType(href: string): ItemType {
+  if (href === "/") return "home";
+  if (href.startsWith("/list/")) return "rank";
+  if (href.startsWith("/singerlist/")) return "singer";
+  if (href.startsWith("/playtype/")) return "playlist";
+  if (href.startsWith("/radiolist/")) return "radio";
+  if (href.startsWith("/mvlist/")) return "mv";
+  const item = detectItemType(href);
+  if (item) return item;
+  return "list";
+}
+
+// 通用列表解析：适配榜单/歌手/歌单/电台/MV 等页面
+function parseGenericList(html: string) {
+  const $ = cheerio.load(html);
+  const list: Array<{
+    url: string;
+    name: string;
+    img: string;
+    type: ItemType;
+  }> = [];
+  const seen = new Set<string>();
+  $("li").each((_, li) => {
+    const $li = $(li);
+    let $a = $li.find(".name a[href]").first();
+    if (!$a.length) $a = $li.find("a[href]").first();
+    const href = $a.attr("href") || "";
+    const type = detectItemType(href);
+    if (!type) return;
     const url = absUrl(href);
     if (seen.has(url)) return;
     seen.add(url);
-    list.push({ url, name });
+    const name = ($a.attr("title") || $a.text()).trim();
+    const img = $li.find("img").attr("src") || "";
+    list.push({ url, name, img, type });
   });
   return list;
+}
+
+// 解析分页信息：完全参考站点结构
+// <div class="page"><a class="current">1</a><a href="/list/top/2.html">2</a><a href="...">下一页</a><a href="...">尾页</a></div>
+function parsePagination(html: string) {
+  const $ = cheerio.load(html);
+  const $page = $(".page").first();
+  const result: {
+    current: number;
+    total: number;
+    items: Array<{ label: string; url: string; current: boolean }>;
+  } = { current: 1, total: 1, items: [] };
+  if (!$page.length) return result;
+
+  $page.find("a").each((_, a) => {
+    const $a = $(a);
+    const label = $a.text().trim();
+    const href = $a.attr("href");
+    const isCurrent = $a.hasClass("current");
+    if (isCurrent) result.current = Number(label) || 1;
+    if (label === "尾页" && href) {
+      const m = href.match(/\/(\d+)\.html/);
+      if (m) result.total = Number(m[1]);
+    }
+    result.items.push({
+      label,
+      url: href ? absUrl(href) : "",
+      current: isCurrent,
+    });
+  });
+  return result;
 }
 
 // 从歌曲详情页调用 /js/play.php 获取真实播放地址
@@ -211,6 +303,7 @@ async function fetchSongPlayInfo(songPageUrl: string) {
       "X-Requested-With": "XMLHttpRequest",
       Referer: url,
     }),
+    // MV 与音乐统一使用 music 类型即可返回可播放地址
     body: `id=${encodeURIComponent(id)}&type=music`,
   });
   const text = await res.text();
@@ -279,10 +372,38 @@ app.get("/music/songRising", async (_req: Request, res: Response) => {
   }
 });
 
-// 热门榜单分类
+// 导航分类（真实站点导航）
+app.get("/music/categories", async (_req: Request, res: Response) => {
+  try {
+    ok(res, parseNavCategories(await fetchPage("/")));
+  } catch (e) {
+    fail(res, (e as Error).message);
+  }
+});
+
+// 热门榜单分类（兼容旧接口，仅返回榜单类入口）
 app.get("/music/hotList", async (_req: Request, res: Response) => {
   try {
-    ok(res, parseHotListCategories(await fetchPage("/")));
+    const all = parseNavCategories(await fetchPage("/"));
+    ok(
+      res,
+      all.filter((c) => c.type === "rank"),
+    );
+  } catch (e) {
+    fail(res, (e as Error).message);
+  }
+});
+
+// 通用列表：根据页面 URL 解析榜单/歌手/歌单/电台/MV 等列表
+app.get("/music/getList", async (req: Request, res: Response) => {
+  const url = String(req.query.url || "");
+  if (!url) return fail(res, "缺少 url 参数");
+  try {
+    const html = await fetchPage(url);
+    ok(res, {
+      list: parseGenericList(html),
+      pagination: parsePagination(html),
+    });
   } catch (e) {
     fail(res, (e as Error).message);
   }

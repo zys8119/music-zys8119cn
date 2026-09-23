@@ -355,10 +355,11 @@ const handleFeatureClick = (feature: string) => {
 <template>
   <div class="p-10 pb-6 max-w-7xl mx-auto">
     <!-- Hero Section -->
-    <div class="text-center mb-15 py-15 bg-gradient-to-br from-blue-500 to-purple-600 rounded-4 text-white">
-      <h1 class="text-5xl font-bold mb-4 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
-        欢迎来到音乐播放器</h1>
-      <p class="text-xl opacity-90 m-0">发现你喜欢的音乐，享受美妙的音乐时光</p>
+    <div class="hero">
+      <div class="hero-glow hero-glow--1"></div>
+      <div class="hero-glow hero-glow--2"></div>
+      <h1 class="hero-title">欢迎来到音乐播放器</h1>
+      <p class="hero-subtitle">发现你喜欢的音乐，享受美妙的音乐时光</p>
     </div>
     <!-- Features Section -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mt-10 mb-10">
@@ -404,12 +405,11 @@ const handleFeatureClick = (feature: string) => {
 
     <!-- 推荐歌手 -->
     <div class="mb-12">
-      <h2 class="text-2xl font-bold mb-6 text-gray-800">推荐歌手</h2>
+      <h2 class="section-title">推荐歌手</h2>
       <div class="grid grid-cols-12 gap-4">
         <div v-for="(artist, index) in recommendedArtists" :key="index"
-          class="flex flex-col items-center cursor-pointer transition-transform hover:scale-105"
-          @click="handleArtistClick(artist)">
-          <div class="w-16 h-16 rounded-full overflow-hidden mb-2 shadow-md">
+          class="artist-card flex flex-col items-center cursor-pointer" @click="handleArtistClick(artist)">
+          <div class="artist-avatar w-16 h-16 rounded-full overflow-hidden mb-2">
             <img :src="artist.img" :alt="artist.name" class="w-full h-full object-cover" />
           </div>
           <span class="text-xs text-gray-700 text-center truncate w-full px-1">{{ artist.name }}</span>
@@ -418,7 +418,7 @@ const handleFeatureClick = (feature: string) => {
     </div>
     <!-- 歌曲飙升榜 -->
     <div class="mb-12">
-      <h2 class="text-2xl font-bold mb-6 text-gray-800">歌曲飙升榜</h2>
+      <h2 class="section-title">歌曲飙升榜</h2>
       <div class="bg-white rounded-lg shadow-sm p-6">
         <div class="space-y-3">
           <div v-for="(song, index) in risingSongs.slice(0, 10)" :key="index"

@@ -11,6 +11,9 @@ export interface Song {
 export interface Category {
   id: number;
   name: string;
+  // 目标站点对应的页面地址与类型（导航分类动态加载时使用）
+  url?: string;
+  type?: string;
 }
 
 export enum PlayMode {

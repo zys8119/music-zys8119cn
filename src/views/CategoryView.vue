@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, inject } from 'vue'
 import { useRoute } from 'vue-router'
-import { NList, NListItem, NThing, NTag, NEmpty, NCard, NGrid, NGridItem, NCheckbox, NButton, NSpace } from 'naive-ui'
+import { NList, NListItem, NThing, NEmpty, NCard, NGrid, NGridItem, NButton, NSpace, NSpin } from 'naive-ui'
 import { musicApi } from '../services/api'
 
 interface Song {
@@ -16,575 +16,305 @@ interface Song {
 interface Category {
   id: number;
   name: string;
+  url?: string;
+  type?: string;
 }
 
-interface HotListCategory {
+// 通用列表项（榜单/歌手/歌单/电台/MV）
+interface ListItem {
   url: string;
   name: string;
+  img: string;
+  type: string;
 }
 
-interface HotListSong {
+// 分页信息（完全参考站点 .page 结构）
+interface PageLink {
+  label: string;
   url: string;
-  name: string;
+  current: boolean;
+}
+interface Pagination {
+  current: number;
+  total: number;
+  items: PageLink[];
 }
 
 const route = useRoute()
 const categoryId = computed(() => Number(route.params.id))
 
-const props = defineProps({
-  playlist: {
-    type: Array as () => Song[],
-    default: () => []
-  },
-  categories: {
-    type: Array as () => Category[],
-    default: () => []
-  },
-  currentSong: {
-    type: Object as () => Song | null,
-    default: null
-  }
-})
-
-const emit = defineEmits<{
-  (e: 'play-song', song: Song): void;
-  (e: 'play-songs', songs: Song[]): void;
-}>()
-
-// 注入全局播放函数
+// 从全局注入的分类与播放函数
+const categories = inject('categories', ref<Category[]>([]))
 const addSongsToPlaylist = inject('addSongsToPlaylist') as (songs: Song[]) => void
 
-// 复选框状态管理
-const selectedSongs = ref<Set<number>>(new Set())
-const isAllSelected = computed(() => {
-  return filteredPlaylist.value.length > 0 && selectedSongs.value.size === filteredPlaylist.value.length
-})
-const isIndeterminate = computed(() => {
-  return selectedSongs.value.size > 0 && selectedSongs.value.size < filteredPlaylist.value.length
-})
+// 当前分类（来自导航）
+const currentCategory = computed((): Category | undefined =>
+  categories.value.find(c => c.id === categoryId.value)
+)
 
-// 热门榜单分类数据
-const hotListCategories = ref<HotListCategory[]>([])
-const isLoadingCategories = ref(false)
-const selectedCategory = ref<string | null>(null)
-
-// 热门榜单歌曲数据
-const hotListSongs = ref<HotListSong[]>([])
-const isLoadingSongs = ref(false)
-
-// 热门榜单歌曲复选框状态管理
-const selectedHotListSongs = ref<Set<number>>(new Set())
-const isAllHotListSelected = computed(() => {
-  return hotListSongs.value.length > 0 && selectedHotListSongs.value.size === hotListSongs.value.length
-})
-const isHotListIndeterminate = computed(() => {
-  return selectedHotListSongs.value.size > 0 && selectedHotListSongs.value.size < hotListSongs.value.length
-})
-
-// 获取热门榜单分类
-const fetchHotListCategories = async () => {
-  if (categoryId.value !== 1) {
-    hotListCategories.value = []
-    selectedCategory.value = null
-    return
-  }
-
-  isLoadingCategories.value = true
-  try {
-    const data = await musicApi.getHotList()
-    if (Array.isArray(data.data) && data.data.length > 0) {
-      hotListCategories.value = data.data
-      // 设置默认选中第一个分类并自动请求歌曲数据
-      if (hotListCategories.value.length > 0 && !selectedCategory.value) {
-        const firstCategory = hotListCategories.value[0]
-        selectedCategory.value = firstCategory.name
-        // 自动请求第一个分类的歌曲数据
-        if (firstCategory.url) {
-          fetchHotListSongs(firstCategory.url)
-        }
-      }
-    } else {
-      hotListCategories.value = []
-      selectedCategory.value = null
-    }
-  } catch (error) {
-    console.error('获取热门榜单分类出错:', error)
-    hotListCategories.value = []
-    selectedCategory.value = null
-  } finally {
-    isLoadingCategories.value = false
-  }
-}
-// 获取热门榜单歌曲
-const fetchHotListSongs = async (url: string) => {
-  isLoadingSongs.value = true
-  try {
-    const data = await musicApi.getHotPlayListByUrl(url)
-    if (Array.isArray(data.data) && data.data.length > 0) {
-      hotListSongs.value = data.data
-    } else {
-      hotListSongs.value = []
-    }
-  } catch (error) {
-    console.error('获取热门榜单歌曲出错:', error)
-    hotListSongs.value = []
-  } finally {
-    isLoadingSongs.value = false
-  }
-}
-
-// 处理分类点击
-const handleCategoryClick = (category: HotListCategory) => {
-  console.log('点击分类:', category.name, category.url)
-  selectedCategory.value = category.name
-  // 清空热门榜单歌曲选中状态
-  selectedHotListSongs.value.clear()
-  // 请求歌曲数据
-  if (category.url) {
-    fetchHotListSongs(category.url)
-  }
-}
-
-// 处理热门榜单歌曲点击
-const handleHotListSongClick = (song: HotListSong, index: number) => {
-  console.log('点击歌曲:', song.name, song.url)
-  // 创建一个临时的Song对象用于播放
-  const tempSong: Song = {
-    id: index + 1000, // 使用索引+1000作为临时ID，避免与普通歌曲冲突
-    title: song.name,
-    artist: '热门榜单',
-    url: song.url,
-    category: categoryId.value
-  }
-  // 使用全局播放列表函数
-  addSongsToPlaylist([tempSong])
-}
-
-// 处理热门榜单歌曲复选框变化
-const handleHotListSongCheck = (index: number, checked: boolean) => {
-  if (checked) {
-    selectedHotListSongs.value.add(index)
-  } else {
-    selectedHotListSongs.value.delete(index)
-  }
-}
-
-// 处理热门榜单全选/取消全选
-const handleHotListSelectAll = (checked: boolean) => {
-  if (checked) {
-    hotListSongs.value.forEach((_, index) => {
-      selectedHotListSongs.value.add(index)
-    })
-  } else {
-    selectedHotListSongs.value.clear()
-  }
-}
-
-// 播放选中的热门榜单歌曲
-const playSelectedHotListSongs = () => {
-  const songsToPlay: Song[] = []
-  selectedHotListSongs.value.forEach(index => {
-    const song = hotListSongs.value[index]
-    if (song) {
-      songsToPlay.push({
-        id: index + 1000,
-        title: song.name,
-        artist: '热门榜单',
-        url: song.url,
-        category: categoryId.value
-      })
-    }
-  })
-  if (songsToPlay.length > 0) {
-    // 使用全局播放列表函数
-    addSongsToPlaylist(songsToPlay)
-    selectedHotListSongs.value.clear()
-  }
-}
-
-// 处理热门榜单歌曲项点击（避免复选框冲突）
-const handleHotListSongItemClick = (song: HotListSong, index: number, event: Event) => {
-  // 如果点击的是复选框区域，不触发播放
-  const target = event.target as HTMLElement
-  if (target.closest('.n-checkbox') || target.closest('.song-checkbox')) {
-    return
-  }
-  handleHotListSongClick(song, index)
-}
-
-// 根据当前分类过滤歌曲列表
-const filteredPlaylist = computed((): Song[] => {
-  return props.playlist.filter(song => song.category === categoryId.value)
-})
-
-// 获取当前分类名称
+// 分类标题：优先使用路由 query 携带的名称
 const categoryName = computed((): string => {
-  const category = props.categories.find(cat => cat.id === categoryId.value)
-  return category ? category.name : '未知分类'
+  const qName = route.query.name as string | undefined
+  if (qName) return qName
+  return currentCategory.value?.name || '未知分类'
 })
 
-const isActive = (song: Song): boolean => {
-  return Boolean(props.currentSong && props.currentSong.id === song.id)
-}
+// 列表数据
+const listItems = ref<ListItem[]>([])
+const isLoading = ref(false)
+const loadError = ref('')
+const pagination = ref<Pagination>({ current: 1, total: 1, items: [] })
+const activeUrl = ref('')
 
-const handlePlaySong = (song: Song): void => {
-  // 使用全局播放列表函数
-  addSongsToPlaylist([song])
-}
+// 根据路由 query 获取目标页面 URL
+const targetUrl = computed((): string => (route.query.url as string) || currentCategory.value?.url || '')
+const pageType = computed((): string => (route.query.type as string) || currentCategory.value?.type || 'list')
 
-// 处理单个歌曲复选框变化
-const handleSongCheck = (song: Song, checked: boolean) => {
-  if (checked) {
-    selectedSongs.value.add(song.id)
-  } else {
-    selectedSongs.value.delete(song.id)
+// 统一处理列表响应（新结构 { list, pagination }，兼容旧的数组结构）
+async function loadList(url: string) {
+  isLoading.value = true
+  loadError.value = ''
+  try {
+    const res = await musicApi.getList(url)
+    if (res.code === 200 && res.data) {
+      const data = res.data
+      if (Array.isArray(data)) {
+        listItems.value = data
+        pagination.value = { current: 1, total: 1, items: [] }
+      } else {
+        listItems.value = Array.isArray(data.list) ? data.list : []
+        pagination.value = data.pagination || { current: 1, total: 1, items: [] }
+      }
+      activeUrl.value = url
+    } else {
+      listItems.value = []
+      pagination.value = { current: 1, total: 1, items: [] }
+    }
+  } catch (error) {
+    console.error('获取列表出错:', error)
+    loadError.value = (error as Error).message || '加载失败'
+    listItems.value = []
+    pagination.value = { current: 1, total: 1, items: [] }
+  } finally {
+    isLoading.value = false
   }
 }
 
-// 处理全选/取消全选
-const handleSelectAll = (checked: boolean) => {
-  if (checked) {
-    filteredPlaylist.value.forEach(song => {
-      selectedSongs.value.add(song.id)
-    })
-  } else {
-    selectedSongs.value.clear()
-  }
-}
-
-// 播放选中的歌曲
-const playSelectedSongs = () => {
-  const songsToPlay = filteredPlaylist.value.filter(song => selectedSongs.value.has(song.id))
-  if (songsToPlay.length > 0) {
-    // 使用全局播放列表函数
-    addSongsToPlaylist(songsToPlay)
-    selectedSongs.value.clear()
-  }
-}
-
-// 处理歌曲项点击（避免复选框冲突）
-const handleSongItemClick = (song: Song, event: Event) => {
-  // 如果点击的是复选框区域，不触发播放
-  const target = event.target as HTMLElement
-  if (target.closest('.n-checkbox') || target.closest('.song-checkbox')) {
+function fetchList() {
+  if (!targetUrl.value) {
+    listItems.value = []
     return
   }
-  handlePlaySong(song)
+  loadList(targetUrl.value)
 }
 
-// 监听路由变化
-watch(categoryId, () => {
-  fetchHotListCategories()
+// 点击列表项：歌曲/MV 直接播放，歌手/歌单/电台 下钻到对应列表
+function handleItemClick(item: ListItem, index: number) {
+  if (item.type === 'song' || item.type === 'mv') {
+    const song: Song = {
+      id: index + 1000,
+      title: item.name,
+      artist: categoryName.value,
+      cover: item.img,
+      url: item.url,
+      category: categoryId.value
+    }
+    addSongsToPlaylist([song])
+    return
+  }
+
+  // 歌手/歌单/电台：加载其详情页列表
+  loadList(item.url)
+}
+
+// 分页跳转（复用站点分页链接）
+function handlePageClick(link: PageLink, event: Event) {
+  event.preventDefault()
+  if (!link.url || link.current || link.url === activeUrl.value) return
+  loadList(link.url)
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+watch(targetUrl, () => {
+  fetchList()
 }, { immediate: true })
 
-// 组件挂载时获取数据
 onMounted(() => {
-  fetchHotListCategories()
+  if (!targetUrl.value) fetchList()
 })
 </script>
 
 <template>
   <div class="category-view">
-    <h1>{{ categoryName }}</h1>
-    <!-- 热门榜单二级分类 -->
-    <div v-if="categoryId === 1 && hotListCategories.length > 0" class="hot-list-categories">
-      <h3 class="categories-title">热门榜单</h3>
-      <n-grid :cols="6" :x-gap="12" :y-gap="12" class="categories-grid">
-        <n-grid-item v-for="category in hotListCategories" :key="category.name">
-          <div 
-            class="category-tag" 
-            :class="{ 'category-tag--selected': selectedCategory === category.name }"
-            @click="handleCategoryClick(category)"
-          >
-            {{ category.name }}
+    <div class="view-header">
+      <h1 class="view-title">{{ categoryName }}</h1>
+      <span v-if="pagination.total > 1" class="view-subtitle">共 {{ pagination.total }} 页</span>
+    </div>
+
+    <div v-if="isLoading" class="loading-container">
+      <n-spin size="large" />
+      <p>加载中...</p>
+    </div>
+
+    <n-card v-else-if="listItems.length === 0" class="empty-container">
+      <n-empty :description="loadError ? `加载失败：${loadError}` : '暂无内容'">
+        <template #extra>
+          <span>该分类下暂时没有可展示的内容</span>
+        </template>
+      </n-empty>
+    </n-card>
+
+    <!-- 歌手类：头像网格 -->
+    <div v-else-if="pageType === 'singer'" class="singer-grid">
+      <n-grid :cols="6" :x-gap="16" :y-gap="16">
+        <n-grid-item v-for="(item, index) in listItems" :key="index">
+          <div class="singer-card" @click="handleItemClick(item, index)">
+            <div class="singer-avatar">
+              <img :src="item.img" :alt="item.name" />
+            </div>
+            <span class="singer-name">{{ item.name }}</span>
           </div>
         </n-grid-item>
       </n-grid>
     </div>
 
-    <!-- 热门榜单歌曲列表 -->
-    <div v-if="categoryId === 1 && selectedCategory && hotListSongs.length > 0" class="hot-list-songs">
-      <h3 class="songs-title">{{ selectedCategory }} - 歌曲列表</h3>
-      <div v-if="isLoadingSongs" class="loading-container">
-        <span>加载中...</span>
-      </div>
-      <div v-else>
-        <!-- 热门榜单全选和批量操作区域 -->
-        <div class="batch-controls">
-          <n-space align="center">
-            <n-checkbox 
-              :checked="isAllHotListSelected" 
-              :indeterminate="isHotListIndeterminate"
-              @update:checked="handleHotListSelectAll"
-            >
-              全选 ({{ selectedHotListSongs.size }}/{{ hotListSongs.length }})
-            </n-checkbox>
-            <n-button 
-              type="primary" 
-              size="small" 
-              :disabled="selectedHotListSongs.size === 0"
-              @click="playSelectedHotListSongs"
-            >
-              播放选中 ({{ selectedHotListSongs.size }})
-            </n-button>
-          </n-space>
-        </div>
-        
-        <n-list hoverable clickable>
-          <n-list-item 
-            v-for="(song, index) in hotListSongs" 
-            :key="index" 
-            @click="handleHotListSongItemClick(song, index, $event)"
-          >
-            <n-thing>
-              <template #avatar>
-                <div class="song-avatar-container">
-                  <n-checkbox 
-                    class="song-checkbox"
-                    :checked="selectedHotListSongs.has(index)"
-                    @update:checked="(checked) => handleHotListSongCheck(index, checked)"
-                    @click.stop
-                  />
-                  <div class="hot-song-avatar">
-                    🎵
-                  </div>
-                </div>
-              </template>
-              <template #header>
-                <div class="song-header">
-                  <span class="song-title">{{ song.name }}</span>
-                </div>
-              </template>
-              <template #description>
-                <span class="song-url">{{ song.url }}</span>
-              </template>
-            </n-thing>
-          </n-list-item>
-        </n-list>
-      </div>
+    <!-- 歌单/电台：封面卡片网格 -->
+    <div v-else-if="pageType === 'playlist' || pageType === 'radio'" class="cover-grid">
+      <n-grid :cols="5" :x-gap="16" :y-gap="16">
+        <n-grid-item v-for="(item, index) in listItems" :key="index">
+          <div class="cover-card" @click="handleItemClick(item, index)">
+            <img :src="item.img" :alt="item.name" class="cover-img" />
+            <span class="cover-name" :title="item.name">{{ item.name }}</span>
+          </div>
+        </n-grid-item>
+      </n-grid>
     </div>
 
-    <div v-if="filteredPlaylist.length > 0" class="song-list">
-      <!-- 全选和批量操作区域 -->
-      <div class="batch-controls">
-        <n-space align="center">
-          <n-checkbox 
-            :checked="isAllSelected" 
-            :indeterminate="isIndeterminate"
-            @update:checked="handleSelectAll"
-          >
-            全选 ({{ selectedSongs.size }}/{{ filteredPlaylist.length }})
-          </n-checkbox>
-          <n-button 
-            type="primary" 
-            size="small" 
-            :disabled="selectedSongs.size === 0"
-            @click="playSelectedSongs"
-          >
-            播放选中 ({{ selectedSongs.size }})
-          </n-button>
-        </n-space>
-      </div>
-      
-      <n-list hoverable clickable>
-        <n-list-item 
-          v-for="song in filteredPlaylist" 
-          :key="song.id" 
-          :class="{ 'active-song': isActive(song) }"
-          @click="handleSongItemClick(song, $event)"
-        >
-          <n-thing>
-            <template #avatar>
-              <div class="song-avatar-container">
-                <n-checkbox 
-                  class="song-checkbox"
-                  :checked="selectedSongs.has(song.id)"
-                  @update:checked="(checked) => handleSongCheck(song, checked)"
-                  @click.stop
-                />
-                <img :src="song.cover || 'https://via.placeholder.com/50'" class="song-avatar" alt="Cover">
-              </div>
-            </template>
-            <template #header>
-              <div class="song-header">
-                <span class="song-title">{{ song.title }}</span>
-              </div>
-            </template>
-            <template #description>
-              <span class="song-artist">{{ song.artist }}</span>
-            </template>
-          </n-thing>
-        </n-list-item>
-      </n-list>
-    </div>
+    <!-- 歌曲/榜单/MV：列表 -->
+    <n-list v-else hoverable clickable class="song-list">
+      <n-list-item v-for="(item, index) in listItems" :key="index" @click="handleItemClick(item, index)">
+        <n-thing>
+          <template #avatar>
+            <img v-if="item.img" :src="item.img" class="song-avatar" alt="cover" />
+            <div v-else class="hot-song-avatar">🎵</div>
+          </template>
+          <template #header>
+            <span class="song-title">{{ item.name }}</span>
+          </template>
+          <template #description>
+            <span class="song-url">{{ item.url }}</span>
+          </template>
+        </n-thing>
+      </n-list-item>
+    </n-list>
 
-    <n-card v-else class="empty-container">
-      <n-empty description="暂无歌曲">
-        <template #extra>
-          <span>该分类下暂时没有歌曲</span>
-        </template>
-      </n-empty>
-    </n-card>
+    <!-- 分页：完全参考站点 .page 结构 -->
+    <div v-if="!isLoading && listItems.length > 0 && pagination.items.length > 0" class="page">
+      <a v-for="(link, idx) in pagination.items" :key="idx" :class="{ current: link.current }"
+        :href="link.url || 'javascript:;'" @click="handlePageClick(link, $event)">{{ link.label }}</a>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .category-view {
-  padding: 20px;
+  padding: 8px 4px 20px;
 }
 
-.song-list {
-  margin-top: 20px;
-}
-
-.song-header {
+.view-header {
   display: flex;
-  align-items: center;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
-.song-title {
-  font-weight: 500;
+.view-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #1f2937;
+  position: relative;
+  padding-left: 16px;
 }
 
-.song-artist {
-  font-size: 12px;
-  color: #888;
+.view-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 5px;
+  height: 22px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #1890ff, #722ed1);
 }
 
-.active-song {
-  background-color: #e6f7ff !important;
-}
-
-.empty-container {
-  margin-top: 20px;
-  min-height: 400px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-/* 热门榜单分类样式 */
-.hot-list-categories {
-  margin: 20px 0;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
-}
-
-.categories-title {
-  margin: 0 0 16px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  border-left: 4px solid #1890ff;
-  padding-left: 12px;
-}
-
-.categories-grid {
-  margin-top: 16px;
-}
-
-.category-tag {
-  padding: 8px 16px;
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 20px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.view-subtitle {
   font-size: 13px;
-  color: #666;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.category-tag:hover {
-  background: #e6f7ff;
-  border-color: #1890ff;
-  color: #1890ff;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
-}
-
-.category-tag:active {
-  transform: translateY(0);
-}
-
-.category-tag--selected {
-  background: #1890ff;
-  color: white;
-  border-color: #1890ff;
-}
-
-.category-tag--selected:hover {
-  background: #40a9ff;
-  border-color: #40a9ff;
-}
-
-/* 热门榜单歌曲列表样式 */
-.hot-list-songs {
-  margin: 20px 0;
-  padding: 20px;
-  background: #fff;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-}
-
-.songs-title {
-  margin: 0 0 16px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  border-left: 4px solid #52c41a;
-  padding-left: 12px;
+  color: #9ca3af;
 }
 
 .loading-container {
   text-align: center;
-  padding: 40px;
-  color: #666;
+  padding: 80px 60px;
+  color: #9ca3af;
+}
+
+.loading-container p {
+  margin-top: 14px;
+  font-size: 14px;
+}
+
+.empty-container {
+  margin-top: 20px;
+  min-height: 320px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 14px;
+}
+
+.song-list {
+  margin-top: 4px;
+}
+
+.song-list :deep(.n-list-item) {
+  border-radius: 12px;
+  padding: 12px 16px;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.song-list :deep(.n-list-item:hover) {
+  background: linear-gradient(90deg, #f5f9ff, #faf7ff);
+  box-shadow: 0 4px 14px rgba(24, 144, 255, 0.1);
+  transform: translateX(2px);
+}
+
+.song-title {
+  font-weight: 500;
+  color: #1f2937;
 }
 
 .song-url {
   font-size: 12px;
-  color: #999;
+  color: #b0b7c3;
   word-break: break-all;
 }
 
-/* 批量操作区域样式 */
-.batch-controls {
-  margin-bottom: 16px;
-  padding: 12px 16px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  border: 1px solid #e0e0e0;
-}
-
-/* 歌曲头像容器样式 */
-.song-avatar-container {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.song-checkbox {
-  flex-shrink: 0;
-}
-
 .song-avatar {
-  width: 50px;
-  height: 50px;
-  border-radius: 4px;
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
   object-fit: cover;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .hot-song-avatar {
-  width: 50px;
-  height: 50px;
-  border-radius: 4px;
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   align-items: center;
@@ -592,5 +322,135 @@ onMounted(() => {
   font-size: 20px;
   color: white;
   flex-shrink: 0;
+}
+
+.singer-grid,
+.cover-grid {
+  margin-top: 4px;
+}
+
+.singer-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  padding: 8px 4px;
+  border-radius: 14px;
+  transition: transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease;
+}
+
+.singer-card:hover {
+  transform: translateY(-4px);
+  background-color: #f8fafc;
+}
+
+.singer-avatar {
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-bottom: 10px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  border: 2px solid #fff;
+  transition: box-shadow 0.24s ease;
+}
+
+.singer-card:hover .singer-avatar {
+  box-shadow: 0 6px 20px rgba(24, 144, 255, 0.28);
+}
+
+.singer-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.singer-name {
+  font-size: 13px;
+  color: #374151;
+  text-align: center;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cover-card {
+  cursor: pointer;
+  transition: transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.cover-card:hover {
+  transform: translateY(-5px);
+}
+
+.cover-img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.24s ease;
+}
+
+.cover-card:hover .cover-img {
+  box-shadow: 0 8px 24px rgba(24, 144, 255, 0.25);
+}
+
+.cover-name {
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 分页样式（参考站点 .page） */
+.page {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin: 28px 0 10px;
+}
+
+.page a {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: #fff;
+  color: #555;
+  font-size: 14px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.page a:hover {
+  border-color: #1890ff;
+  color: #1890ff;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
+}
+
+.page a.current {
+  background: #1890ff;
+  border-color: #1890ff;
+  color: #fff;
+  font-weight: 600;
+  cursor: default;
+}
+
+.page a.current:hover {
+  box-shadow: none;
 }
 </style>

@@ -9,12 +9,6 @@ import { musicApi } from './services/api'
 import type { Song, Category } from './types/index'
 import { PlayMode } from './types/index'
 
-// 定义热门榜单分类类型
-interface HotListCategory {
-  url: string;
-  name: string;
-}
-
 // 创建路由实例
 const router = useRouter()
 const route = useRoute()
@@ -26,19 +20,29 @@ const volume = ref(0.8)
 const currentTime = ref(0)
 const duration = ref(0)
 const playMode = ref<PlayMode>(PlayMode.SEQUENCE)
-const categories = ref<Category[]>([
-  { id: 1, name: '热门榜单' },
-  { id: 2, name: '新歌榜' },
-  { id: 3, name: '排行榜' },
-  { id: 4, name: '摇滚' },
-  { id: 5, name: '电子' },
-  { id: 6, name: '古典' },
-  { id: 7, name: '爵士' },
-  { id: 8, name: '民谣' }
-])
+const categories = ref<Category[]>([])
+const categoriesLoading = ref(false)
+
+// 动态加载真实站点导航分类
+async function fetchCategories() {
+  categoriesLoading.value = true
+  try {
+    const res = await musicApi.getCategories()
+    if (res.code === 200 && Array.isArray(res.data)) {
+      categories.value = res.data
+    }
+  } catch (error) {
+    console.error('获取导航分类出错:', error)
+  } finally {
+    categoriesLoading.value = false
+  }
+}
+
+// 组件挂载时加载分类
+onMounted(() => {
+  fetchCategories()
+})
 const currentCategory = ref<number | null>(null)
-const hotListCategories = ref<HotListCategory[]>([])
-const showHotListDropdown = ref(false)
 
 // 歌曲列表
 const playlist = ref<Song[]>([
@@ -86,7 +90,7 @@ async function playSong(song: Song) {
 // 添加歌曲到播放列表并播放
 async function addSongsToPlaylist(songs: Song[]) {
   if (songs.length === 0) return
-  
+
   // 将新歌曲添加到播放列表中
   songs.forEach(song => {
     // 检查歌曲是否已存在于播放列表中
@@ -95,7 +99,7 @@ async function addSongsToPlaylist(songs: Song[]) {
       playlist.value.push(song)
     }
   })
-  
+
   // 播放第一首歌曲
   await playSong(songs[0])
 }
@@ -110,19 +114,19 @@ async function playNext() {
   if (!currentSong.value || playlist.value.length === 0) return
 
   const currentIndex = playlist.value.findIndex((song: Song) => song.id === currentSong.value?.id)
-  
+
   switch (playMode.value) {
     case PlayMode.SINGLE:
       // 单曲循环：重复播放当前歌曲
       await playSong(currentSong.value)
       break
-      
+
     case PlayMode.RANDOM:
       // 随机播放：随机选择一首歌曲
       const randomIndex = Math.floor(Math.random() * playlist.value.length)
       await playSong(playlist.value[randomIndex])
       break
-      
+
     case PlayMode.LOOP:
       // 列表循环：播放完最后一首后回到第一首
       if (currentIndex === -1 || currentIndex === playlist.value.length - 1) {
@@ -131,7 +135,7 @@ async function playNext() {
         await playSong(playlist.value[currentIndex + 1])
       }
       break
-      
+
     case PlayMode.SEQUENCE:
     default:
       // 顺序播放：播放完最后一首后停止
@@ -195,12 +199,12 @@ function downloadSong() {
   link.href = song.url
   link.download = `${song.artist} - ${song.title}.mp3`
   link.target = '_blank'
-  
+
   // 添加到DOM并触发点击
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
-  
+
   useMessage().success(`开始下载：${song.title}`)
 }
 
@@ -208,10 +212,10 @@ function downloadSong() {
 function removeSongs(songIds: number[]) {
   // 检查当前播放的歌曲是否在删除列表中
   const isCurrentSongDeleted = currentSong.value && songIds.includes(currentSong.value.id)
-  
+
   // 从播放列表中移除选中的歌曲
   playlist.value = playlist.value.filter(song => !songIds.includes(song.id))
-  
+
   // 如果当前播放的歌曲被删除，停止播放并清空当前歌曲
   if (isCurrentSongDeleted) {
     isPlaying.value = false
@@ -277,8 +281,8 @@ function handleKeydown(event: KeyboardEvent) {
         // 保存当前音量并静音
         const savedVolume = volume.value
         volume.value = 0
-        // 将保存的音量存储到一个临时变量中
-        ;(window as any).savedVolume = savedVolume
+          // 将保存的音量存储到一个临时变量中
+          ; (window as any).savedVolume = savedVolume
       } else {
         // 恢复之前的音量
         volume.value = (window as any).savedVolume || 0.8
@@ -321,42 +325,23 @@ onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown)
 })
 
-// 获取热门榜单分类
-async function fetchHotListCategories() {
-  try {
-    const data = await musicApi.getHotList()
-    hotListCategories.value = Array.isArray(data) ? data : []
-  } catch (error) {
-    console.error('获取热门榜单分类出错:', error)
-    // 提供模拟数据作为容错
-    hotListCategories.value = [
-      { url: 'https://www.22a5.com/list/djwuqu.html', name: 'DJ舞曲大全' },
-      { url: 'https://example.com/pop', name: '流行榜单' },
-      { url: 'https://example.com/rock', name: '摇滚榜单' }
-    ]
-  }
-}
-
-// 处理分类变更
+// 处理分类变更：跳转到分类页并携带目标站点 URL/类型
 function handleCategoryChange(categoryId: number) {
   currentCategory.value = categoryId
-  // 如果点击的是热门榜单，获取二级分类
-  if (categoryId === 1) {
-    fetchHotListCategories()
-    showHotListDropdown.value = !showHotListDropdown.value
-  } else {
-    showHotListDropdown.value = false
-  }
-}
+  const category = categories.value.find((c) => c.id === categoryId)
+  if (!category) return
 
-// 处理热门榜单分类点击
-function handleHotListCategoryClick(category: HotListCategory) {
-  console.log('点击热门榜单分类:', category.name, category.url)
-  // 这里可以添加跳转到对应榜单页面的逻辑
-  if (category.url) {
-    window.open(category.url, '_blank')
+  // 首页直接回首页
+  if (category.type === 'home') {
+    router.push({ name: 'home' })
+    return
   }
-  showHotListDropdown.value = false
+
+  router.push({
+    name: 'category',
+    params: { id: categoryId.toString() },
+    query: { url: category.url, name: category.name, type: category.type },
+  })
 }
 
 // 提供全局数据
@@ -370,8 +355,6 @@ provide('playMode', playMode)
 provide('togglePlayMode', togglePlayMode)
 provide('categories', categories)
 provide('currentCategory', currentCategory)
-provide('hotListCategories', hotListCategories)
-provide('showHotListDropdown', showHotListDropdown)
 provide('playSong', playSong)
 provide('globalPlaySong', playSong)
 provide('addSongsToPlaylist', addSongsToPlaylist)
@@ -382,7 +365,6 @@ provide('adjustVolume', adjustVolume)
 provide('seekTo', seekTo)
 provide('seek', seek)
 provide('handleCategoryChange', handleCategoryChange)
-provide('handleHotListCategoryClick', handleHotListCategoryClick)
 provide('removeSongs', removeSongs)
 provide('clearPlaylist', clearPlaylist)
 provide('downloadSong', downloadSong)
@@ -392,23 +374,18 @@ provide('downloadSong', downloadSong)
   <n-config-provider>
     <n-message-provider>
       <div class="h-100vh flex flex-col overflow-hidden">
-        <MusicHeader 
-          :categories="categories" 
-          :current-category="currentCategory"
-          :hot-list-categories="hotListCategories"
-          :show-hot-list-dropdown="showHotListDropdown"
-          @change-category="handleCategoryChange"
-          @hot-list-category-click="handleHotListCategoryClick" />
+        <MusicHeader :categories="categories" :current-category="currentCategory"
+          @change-category="handleCategoryChange" />
         <n-layout class="flex-1 overflow-hidden" has-sider>
           <MusicSidebar :playlist="playlist" :current-song="currentSong" :categories="categories"
-            :current-category="currentCategory" @play-song="playSong" @change-category="handleCategoryChange" 
+            :current-category="currentCategory" @play-song="playSong" @change-category="handleCategoryChange"
             @remove-songs="removeSongs" @clear-playlist="clearPlaylist" />
           <n-layout-content class="overflow-y-auto p-6 pt-22 pb-24 scrollbar-hide">
             <router-view />
           </n-layout-content>
         </n-layout>
         <MusicPlayer :current-song="currentSong" :is-playing="isPlaying" :volume="volume" @toggle-play="togglePlay"
-          @play-next="playNext" @play-prev="playPrev" @update:volume="(val: number) => volume = val" 
+          @play-next="playNext" @play-prev="playPrev" @update:volume="(val: number) => volume = val"
           @toggle-play-mode="togglePlayMode" @download-song="downloadSong" />
         <KeyboardShortcuts />
       </div>
