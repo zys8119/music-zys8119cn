@@ -69,6 +69,24 @@ function openFullscreen() {
   if (props.currentSong) fullscreenOpen.value = true
 }
 
+// 切换全屏播放页（快捷键 F / 封面按钮复用）
+function toggleFullscreen() {
+  if (!props.currentSong) return
+  fullscreenOpen.value = !fullscreenOpen.value
+}
+
+// F 键：切换全屏播放页
+function handleKeydown(event: KeyboardEvent) {
+  const target = event.target as HTMLElement
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+    return
+  }
+  if (event.code === 'KeyF' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+    event.preventDefault()
+    toggleFullscreen()
+  }
+}
+
 // ===== 收藏 =====
 // 当前歌曲的稳定收藏键（优先 songKey，回退 url）
 const favoriteKey = computed(() => props.currentSong?.songKey || props.currentSong?.url || '')
@@ -200,10 +218,12 @@ watch(() => props.currentSong, (song) => {
 
 onMounted(() => {
   window.addEventListener('mousemove', onWindowMouseMove)
+  document.addEventListener('keydown', handleKeydown)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('mousemove', onWindowMouseMove)
+  document.removeEventListener('keydown', handleKeydown)
 })
 
 // 使用全局状态或本地状态
