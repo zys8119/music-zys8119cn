@@ -15,7 +15,10 @@ import {
   MusicalNotes,
   VolumeHigh,
   VolumeMute,
+  Heart,
+  HeartOutline,
 } from '@vicons/ionicons5'
+import { musicApi } from '../services/api'
 
 interface Song {
   id: number
@@ -25,6 +28,7 @@ interface Song {
   category: number
   cover: string
   url: string
+  songKey?: string
 }
 
 // 注入全局状态
@@ -112,6 +116,55 @@ function toggleMute() {
     volume.value = 0
   }
 }
+
+// ===== 收藏 =====
+const message = useMessage()
+// 当前歌曲的稳定收藏键（优先 songKey，回退 url）
+const favoriteKey = computed(() => currentSong.value?.songKey || currentSong.value?.url || '')
+const isFavorited = ref(false)
+
+async function refreshFavoriteState() {
+  const key = favoriteKey.value
+  if (!key) {
+    isFavorited.value = false
+    return
+  }
+  try {
+    const res = await musicApi.checkFavorite(key)
+    if (res.code === 200) isFavorited.value = !!res.data?.favorite
+  } catch (e) {
+    console.error('查询收藏状态失败', e)
+  }
+}
+
+async function toggleFavorite() {
+  const song = currentSong.value
+  const key = favoriteKey.value
+  if (!song || !key) return
+  try {
+    if (isFavorited.value) {
+      await musicApi.removeFavoriteByUrl(key)
+      isFavorited.value = false
+      message.success('已取消收藏')
+    } else {
+      await musicApi.addFavorite({
+        title: song.title,
+        artist: song.artist,
+        cover: song.cover,
+        url: key,
+      })
+      isFavorited.value = true
+      message.success('已添加到收藏')
+    }
+  } catch (e) {
+    console.error('收藏操作失败', e)
+    message.error('操作失败')
+  }
+}
+
+watch(favoriteKey, () => {
+  refreshFavoriteState()
+}, { immediate: true })
 
 function close() {
   fullscreenOpen.value = false
@@ -383,6 +436,14 @@ onBeforeUnmount(() => {
 
         <div class="fp-controls-row">
           <div class="fp-controls">
+            <!-- 收藏按钮 -->
+            <button class="fp-btn" type="button" :aria-label="isFavorited ? '取消收藏' : '收藏'"
+              :title="isFavorited ? '取消收藏' : '收藏'" @click="toggleFavorite()">
+              <n-icon size="20" :color="isFavorited ? '#eb2f96' : undefined">
+                <component :is="isFavorited ? Heart : HeartOutline" />
+              </n-icon>
+            </button>
+
             <button class="fp-btn" type="button" :title="playModeText" @click="togglePlayMode()">
               <n-icon size="20">
                 <component :is="playModeIcon" />

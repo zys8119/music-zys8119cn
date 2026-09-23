@@ -572,6 +572,21 @@ app.post("/music/favorites", (req: Request, res: Response) => {
   ok(res, addFavorite({ title, artist, cover, url }, groupId ?? null));
 });
 
+// 判断是否已收藏（返回收藏记录，便于取消收藏）
+app.get("/music/favorites/check", (req: Request, res: Response) => {
+  const url = String(req.query.url || "");
+  const row = url ? getFavoriteByUrl(url) : null;
+  ok(res, { favorite: !!row, item: row });
+});
+
+// 按歌曲链接取消收藏（播放器爱心按钮）——必须定义在 /:id 之前，否则会被 :id 捕获
+app.delete("/music/favorites/by-url", (req: Request, res: Response) => {
+  const url = String(req.query.url || "");
+  if (!url) return fail(res, "缺少 url 参数");
+  removeFavoriteByUrl(url);
+  ok(res, { success: true });
+});
+
 // 删除收藏
 app.delete("/music/favorites/:id", (req: Request, res: Response) => {
   removeFavorite(Number(req.params.id));
@@ -582,21 +597,6 @@ app.delete("/music/favorites/:id", (req: Request, res: Response) => {
 app.patch("/music/favorites/:id", (req: Request, res: Response) => {
   const groupId = req.body?.groupId ?? null;
   ok(res, moveFavorite(Number(req.params.id), groupId));
-});
-
-// 判断是否已收藏（返回收藏记录，便于取消收藏）
-app.get("/music/favorites/check", (req: Request, res: Response) => {
-  const url = String(req.query.url || "");
-  const row = url ? getFavoriteByUrl(url) : null;
-  ok(res, { favorite: !!row, item: row });
-});
-
-// 按歌曲链接取消收藏（播放器爱心按钮）
-app.delete("/music/favorites/by-url", (req: Request, res: Response) => {
-  const url = String(req.query.url || "");
-  if (!url) return fail(res, "缺少 url 参数");
-  removeFavoriteByUrl(url);
-  ok(res, { success: true });
 });
 
 // ---------------------------------------------------------------------------

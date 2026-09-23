@@ -137,6 +137,8 @@ async function playSong(song: Song) {
 
   // 仅当仍是歌曲详情页链接时才请求真实播放地址，避免重复解析
   if (song.url && isSongPageUrl(song.url)) {
+    // 记录稳定的收藏键（详情页 URL）
+    const stableKey = song.songKey || song.url
     // 先用原始详情页 URL 获取歌词
     fetchLyric(song.url)
     const realSongInfo = await fetchRealSongInfo(song.url)
@@ -144,18 +146,19 @@ async function playSong(song: Song) {
       // 使用真实的歌曲信息更新当前歌曲
       currentSong.value = {
         ...song,
+        songKey: stableKey,
         title: realSongInfo.title || song.title,
         cover: realSongInfo.pic || song.cover,
         url: realSongInfo.url || song.url
       }
     } else {
       // 获取失败时仍使用原始信息，并重建对象引用以确保播放器感知切换
-      currentSong.value = { ...song }
+      currentSong.value = { ...song, songKey: stableKey }
     }
   } else {
     // 已是可播放直链：清空歌词并重建对象引用
     currentLyric.value = ''
-    currentSong.value = { ...song }
+    currentSong.value = { ...song, songKey: song.songKey || song.url }
   }
   isPlaying.value = true
 }

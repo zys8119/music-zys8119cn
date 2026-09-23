@@ -15,8 +15,11 @@ import {
   RefreshCircle,
   Download,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  Heart,
+  HeartOutline
 } from '@vicons/ionicons5'
+import { musicApi } from '../services/api'
 
 interface Song {
   id: number;
@@ -26,6 +29,7 @@ interface Song {
   category: number;
   cover: string;
   url: string;
+  songKey?: string;
 }
 
 const props = defineProps<{
@@ -64,6 +68,58 @@ const fullscreenOpen = inject<Ref<boolean>>('fullscreenOpen', ref(false))
 function openFullscreen() {
   if (props.currentSong) fullscreenOpen.value = true
 }
+
+// ===== 收藏 =====
+// 当前歌曲的稳定收藏键（优先 songKey，回退 url）
+const favoriteKey = computed(() => props.currentSong?.songKey || props.currentSong?.url || '')
+// 当前是否已收藏
+const isFavorited = ref(false)
+
+// 根据当前歌曲刷新收藏状态
+async function refreshFavoriteState() {
+  const key = favoriteKey.value
+  if (!key) {
+    isFavorited.value = false
+    return
+  }
+  try {
+    const res = await musicApi.checkFavorite(key)
+    if (res.code === 200) isFavorited.value = !!res.data?.favorite
+  } catch (e) {
+    console.error('查询收藏状态失败', e)
+  }
+}
+
+// 切换收藏 / 取消收藏
+async function toggleFavorite() {
+  const song = props.currentSong
+  const key = favoriteKey.value
+  if (!song || !key) return
+  try {
+    if (isFavorited.value) {
+      await musicApi.removeFavoriteByUrl(key)
+      isFavorited.value = false
+      message.success('已取消收藏')
+    } else {
+      await musicApi.addFavorite({
+        title: song.title,
+        artist: song.artist,
+        cover: song.cover,
+        url: key,
+      })
+      isFavorited.value = true
+      message.success('已添加到收藏')
+    }
+  } catch (e) {
+    console.error('收藏操作失败', e)
+    message.error('操作失败')
+  }
+}
+
+// 切歌时刷新收藏状态
+watch(favoriteKey, () => {
+  refreshFavoriteState()
+}, { immediate: true })
 
 // 播放模式图标映射
 const playModeIcon = computed(() => {
@@ -311,6 +367,16 @@ onBeforeUnmount(() => {
 
     <div class="flex-1 flex flex-col items-center">
       <div class="flex items-center mb-2">
+        <!-- 收藏按钮 -->
+        <n-button quaternary circle :title="isFavorited ? '取消收藏' : '收藏'" :aria-label="isFavorited ? '取消收藏' : '收藏'"
+          @click="toggleFavorite">
+          <template #icon>
+            <n-icon size="20" :color="isFavorited ? '#eb2f96' : undefined">
+              <component :is="isFavorited ? Heart : HeartOutline" />
+            </n-icon>
+          </template>
+        </n-button>
+
         <n-button quaternary circle @click="handleTogglePlayMode" :title="playModeText">
           <template #icon>
             <n-icon size="20" :class="{ 'text-blue-500': playMode !== 'sequence' }">

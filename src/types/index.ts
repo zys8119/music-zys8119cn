@@ -6,6 +6,8 @@ export interface Song {
   category: number;
   cover: string;
   url: string;
+  // 稳定的歌曲标识（原始详情页链接），用于收藏等持久化操作
+  songKey?: string;
 }
 
 export interface Category {
