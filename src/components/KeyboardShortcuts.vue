@@ -84,6 +84,14 @@ onUnmounted(() => {
               <span class="text-gray-600">全屏播放</span>
               <n-tag size="small" type="info">F</n-tag>
             </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">全选/取消全选</span>
+              <n-tag size="small" type="info">A</n-tag>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">播放选中</span>
+              <n-tag size="small" type="info">P</n-tag>
+            </div>
           </div>
         </div>
 

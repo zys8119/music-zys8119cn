@@ -202,12 +202,44 @@ watch(listItems, () => {
   selectedIndexes.value = new Set()
 })
 
+// ===== 快捷键：全选 / 播放 =====
+// 播放当前页全部歌曲（无选中时先全选再播放）
+function playAllCurrentPage() {
+  if (!isPlayable.value || listItems.value.length === 0) return
+  if (selectedIndexes.value.size === 0) {
+    selectedIndexes.value = new Set(listItems.value.map((_, i) => i))
+  }
+  playSelected()
+}
+
+function handleKeydown(event: KeyboardEvent) {
+  const target = event.target as HTMLElement
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
+  if (event.ctrlKey || event.metaKey || event.altKey) return
+  if (!isPlayable.value) return
+
+  if (event.code === 'KeyA') {
+    // A：全选 / 取消全选
+    event.preventDefault()
+    toggleSelectAll()
+  } else if (event.code === 'KeyP') {
+    // P：播放选中（无选中则全选并播放）
+    event.preventDefault()
+    playAllCurrentPage()
+  }
+}
+
 watch(targetUrl, () => {
   fetchList()
 }, { immediate: true })
 
 onMounted(() => {
   if (!targetUrl.value) fetchList()
+  document.addEventListener('keydown', handleKeydown)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleKeydown)
 })
 </script>
 

@@ -167,10 +167,10 @@ async function playSong(song: Song) {
 async function addSongsToPlaylist(songs: Song[]) {
   if (songs.length === 0) return
 
-  // 将新歌曲添加到播放列表中
+  // 将新歌曲添加到播放列表中（以 songKey/url 作为唯一键，避免各列表页索引 id 跨批次重复导致误判为已存在）
   songs.forEach(song => {
-    // 检查歌曲是否已存在于播放列表中
-    const exists = playlist.value.some(existingSong => existingSong.id === song.id)
+    const key = song.songKey || song.url
+    const exists = playlist.value.some(existingSong => (existingSong.songKey || existingSong.url) === key)
     if (!exists) {
       playlist.value.push(song)
     }

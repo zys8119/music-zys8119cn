@@ -174,8 +174,16 @@ function selectSong(song: Song) {
   playSong(song)
 }
 
+// 歌曲的稳定唯一键（优先 songKey，其次 url，最后回退 id）
+// 各列表页的 id 是按索引+偏移生成的，跨批次会重复，不能作为唯一标识
+function songKeyOf(song: Song): string {
+  return song.songKey || song.url || String(song.id)
+}
+
 function isCurrent(song: Song): boolean {
-  return currentSong.value?.id === song.id
+  const cur = currentSong.value
+  if (!cur) return false
+  return songKeyOf(cur) === songKeyOf(song)
 }
 
 // ===== 歌词 =====
@@ -378,7 +386,7 @@ onBeforeUnmount(() => {
             <span class="fp-playlist__count">{{ playlist.length }} 首</span>
           </div>
           <div ref="listEl" class="fp-playlist__list">
-            <button v-for="song in playlist" :key="song.id" type="button" class="fp-song"
+            <button v-for="song in playlist" :key="songKeyOf(song)" type="button" class="fp-song"
               :class="{ 'fp-song--active': isCurrent(song) }" @click="selectSong(song)">
               <span class="fp-song__index">
                 <n-icon v-if="isCurrent(song)" size="14">

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, ref } from 'vue'
+import { computed, inject, ref, type Ref } from 'vue'
 import { MusicalNote, Heart, Time, Albums, List, TrashOutline, HeartOutline } from '@vicons/ionicons5'
 import { NIcon, NButton, NCheckbox, useMessage } from 'naive-ui'
 import { musicApi } from '../services/api'
@@ -94,6 +94,30 @@ const filteredPlaylist = computed(() => {
 })
 
 const globalPlaySong = inject('globalPlaySong') as ((song: Song) => void) | undefined
+// 播放条可见状态：用于计算列表底部留白
+const playerVisible = inject<Ref<boolean>>('playerVisible', ref(true))
+
+// ===== 动态计算播放列表高度 =====
+const listEl = ref<HTMLElement | null>(null)
+const listHeight = ref(0)
+
+function updateListHeight() {
+  const el = listEl.value
+  if (!el) return
+  const top = el.getBoundingClientRect().top
+  // 底部留白：播放条可见时避开播放条，否则仅留少量间距
+  const bottomOffset = props.currentSong && playerVisible.value ? 88 : 16
+  listHeight.value = Math.max(120, window.innerHeight - top - bottomOffset)
+}
+
+onMounted(() => {
+  nextTick(updateListHeight)
+  window.addEventListener('resize', updateListHeight)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateListHeight)
+})
 
 const handleSongClick = (song: Song): void => {
   if (globalPlaySong) {
@@ -120,6 +144,12 @@ const isIndeterminate = computed(() => {
   const selectedCount = filteredPlaylist.value.filter(song => selectedSongs.value.has(song.id)).length
   return selectedCount > 0 && selectedCount < filteredPlaylist.value.length
 })
+
+// 列表上方元素（批量操作栏）或数据变化时重新计算
+watch(
+  [() => selectedSongs.value.size, () => filteredPlaylist.value.length, () => props.currentSong, playerVisible],
+  () => nextTick(updateListHeight)
+)
 
 
 
@@ -251,7 +281,7 @@ async function toggleFavorite(song: Song, event: Event) {
           </n-checkbox>
         </div>
 
-        <n-list class="flex-1 overflow-y-auto playlist-list bg-#0000">
+        <n-list ref="listEl" class="playlist-list" :style="{ height: listHeight + 'px' }">
           <n-list-item v-for="song in filteredPlaylist" :key="song.id"
             class="cursor-pointer rounded transition-colors-300 group sidebar-song" :class="{
               'sidebar-song--active': isSongActive(song),
@@ -381,10 +411,12 @@ async function toggleFavorite(song: Song, event: Event) {
   background: rgba(255, 77, 79, 0.12);
 }
 
-/* 播放列表区域左右内边距 */
+/* 播放列表区域：动态高度 + 内部滚动 */
 .playlist-list {
   padding-left: 4px;
   padding-right: 4px;
+  overflow-y: auto;
+  transition: height 0.24s ease;
 }
 
 /* 播放列表项美化 */
