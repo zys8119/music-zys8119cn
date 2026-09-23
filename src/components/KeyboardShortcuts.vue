@@ -1,5 +1,9 @@
 <script setup lang="ts">
+import type { Ref } from 'vue'
+
 const showShortcuts = ref(false)
+// 全屏播放页打开时隐藏快捷键按钮
+const fullscreenOpen = inject<Ref<boolean>>('fullscreenOpen', ref(false))
 
 function toggleShortcuts() {
   showShortcuts.value = !showShortcuts.value
@@ -8,6 +12,8 @@ function toggleShortcuts() {
 // 监听 ? 键显示快捷键帮助
 function handleKeydown(event: KeyboardEvent) {
   if (event.key === '?' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+    // 全屏播放页打开时不响应
+    if (fullscreenOpen.value) return
     const target = event.target as HTMLElement
     if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA' && !target.isContentEditable) {
       event.preventDefault()
@@ -23,25 +29,25 @@ onMounted(() => {
   document.addEventListener('keydown', handleKeydown)
 })
 
+// 全屏播放页打开时，关闭快捷键弹窗
+watch(fullscreenOpen, (open) => {
+  if (open) showShortcuts.value = false
+})
+
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown)
 })
 </script>
 
 <template>
-  <!-- 快捷键帮助按钮 -->
-  <n-button 
-    quaternary 
-    circle 
-    size="small" 
-    @click="toggleShortcuts"
-    class="fixed top-4 right-4 z-1000"
-    title="键盘快捷键帮助 (按 ? 键)"
-  >
+  <!-- 快捷键帮助按钮（全屏播放时隐藏） -->
+  <n-button v-if="!fullscreenOpen" quaternary circle size="small" @click="toggleShortcuts"
+    class="fixed top-4 right-4 z-1000" title="键盘快捷键帮助 (按 ? 键)">
     <template #icon>
       <n-icon size="16">
         <svg viewBox="0 0 24 24">
-          <path fill="currentColor" d="M11.07 12.85c.77-1.39 2.25-2.21 3.11-3.44c.91-1.29.4-3.7-2.18-3.7c-1.69 0-2.52 1.28-2.87 2.34L6.54 6.96C7.25 4.83 9.18 3 11.99 3c2.35 0 3.96 1.07 4.78 2.41c.7 1.15.6 3.05-.85 4.49c-1.06 1.06-2.87 2.17-3.05 3.95zm-.52 3.93c0-.59.47-1.06 1.06-1.06c.59 0 1.06.47 1.06 1.06c0 .59-.47 1.06-1.06 1.06c-.59 0-1.06-.47-1.06-1.06z"/>
+          <path fill="currentColor"
+            d="M11.07 12.85c.77-1.39 2.25-2.21 3.11-3.44c.91-1.29.4-3.7-2.18-3.7c-1.69 0-2.52 1.28-2.87 2.34L6.54 6.96C7.25 4.83 9.18 3 11.99 3c2.35 0 3.96 1.07 4.78 2.41c.7 1.15.6 3.05-.85 4.49c-1.06 1.06-2.87 2.17-3.05 3.95zm-.52 3.93c0-.59.47-1.06 1.06-1.06c.59 0 1.06.47 1.06 1.06c0 .59-.47 1.06-1.06 1.06c-.59 0-1.06-.47-1.06-1.06z" />
         </svg>
       </n-icon>
     </template>
