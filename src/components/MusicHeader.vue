@@ -18,6 +18,7 @@ interface Category {
 }
 
 const router = useRouter()
+const message = useMessage()
 
 const props = defineProps<{
   categories: Category[];
@@ -31,6 +32,19 @@ const emit = defineEmits<{
 const handleCategoryChange = (categoryId: number): void => {
   // 仅通知父组件统一处理跳转（父组件会携带目标站点 URL/类型）
   emit('change-category', categoryId)
+}
+
+// 搜索关键词
+const searchKeyword = ref('')
+
+// 执行搜索：跳转到搜索结果页
+const handleSearch = (): void => {
+  const keyword = searchKeyword.value.trim()
+  if (!keyword) {
+    message.warning('请输入您要搜索的内容！')
+    return
+  }
+  router.push({ name: 'search', query: { wd: keyword } })
 }
 
 const goToHome = (): void => {
@@ -61,11 +75,21 @@ const getCategoryIcon = (category: Category) => {
         <span class="logo-text" @click="goToHome">音乐播放器</span>
       </div>
       <div class="search-container">
-        <n-input placeholder="搜索歌曲、歌手或专辑" round clearable class="search-input">
+        <n-input v-model:value="searchKeyword" placeholder="搜索歌曲、歌手或专辑" round clearable class="search-input"
+          @keyup.enter="handleSearch">
           <template #prefix>
             <n-icon>
               <search />
             </n-icon>
+          </template>
+          <template #suffix>
+            <n-button quaternary circle size="small" class="search-btn" aria-label="搜索" @click="handleSearch">
+              <template #icon>
+                <n-icon>
+                  <search />
+                </n-icon>
+              </template>
+            </n-button>
           </template>
         </n-input>
       </div>
@@ -179,6 +203,16 @@ const getCategoryIcon = (category: Category) => {
   width: 280px;
   margin-right: auto;
   flex-shrink: 1;
+}
+
+.search-container :deep(.search-btn) {
+  color: #6b7280;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.search-container :deep(.search-btn:hover) {
+  color: #1890ff;
+  background-color: #f2f6ff;
 }
 
 .nav-menu {
