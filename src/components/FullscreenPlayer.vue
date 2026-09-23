@@ -166,25 +166,44 @@ const activeLyricIndex = computed(() => {
   return idx
 })
 
-// 用户手动滚动：暂停自动滚动 3 秒
+// 用户手动滚动：暂停自动滚动，并设定“停止滚动后重新居中”的时机
 function pauseAutoScroll() {
   userScrollLock.value = true
-  if (scrollLockTimer !== null) clearTimeout(scrollLockTimer)
-  scrollLockTimer = window.setTimeout(() => {
+  if (scrollIdleTimer !== null) clearTimeout(scrollIdleTimer)
+  // 停止滚动 1.2 秒后，解除锁定并重新居中当前激活行
+  scrollIdleTimer = window.setTimeout(() => {
     userScrollLock.value = false
-  }, 3000)
+    if (fullscreenOpen.value && activeLyricIndex.value >= 0) {
+      scrollToLyric(activeLyricIndex.value)
+    }
+  }, 1200)
+}
+
+// 鼠标离开歌词区域：立即将当前激活行重新居中
+function onLyricsLeave() {
+  if (scrollIdleTimer !== null) {
+    clearTimeout(scrollIdleTimer)
+    scrollIdleTimer = null
+  }
+  userScrollLock.value = false
+  if (fullscreenOpen.value && activeLyricIndex.value >= 0) {
+    scrollToLyric(activeLyricIndex.value)
+  }
 }
 
 // 将指定行滚动到容器中间
 function scrollToLyric(idx: number) {
   const container = lyricsEl.value
   const el = container?.children[idx] as HTMLElement | undefined
-  if (container && el) {
-    container.scrollTo({
-      top: el.offsetTop - container.clientHeight / 2 + el.clientHeight / 2,
-      behavior: 'smooth',
-    })
-  }
+  if (!container || !el) return
+  const containerRect = container.getBoundingClientRect()
+  const elRect = el.getBoundingClientRect()
+  // 目标行中心相对容器内容顶部的距离
+  const elCenter = elRect.top - containerRect.top + container.scrollTop + elRect.height / 2
+  container.scrollTo({
+    top: elCenter - container.clientHeight / 2,
+    behavior: 'smooth',
+  })
 }
 
 // 高亮行变化时自动滚动（用户手动滚动期间不打扰）
@@ -205,7 +224,10 @@ watch(fullscreenOpen, async (open) => {
 function seekToLyric(line: LyricLine) {
   seekTo(line.time)
   userScrollLock.value = false
-  if (scrollLockTimer !== null) clearTimeout(scrollLockTimer)
+  if (scrollIdleTimer !== null) {
+    clearTimeout(scrollIdleTimer)
+    scrollIdleTimer = null
+  }
 }
 
 // Esc 关闭全屏播放页
@@ -218,7 +240,7 @@ function onKeydown(e: KeyboardEvent) {
 onMounted(() => document.addEventListener('keydown', onKeydown))
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKeydown)
-  if (scrollLockTimer !== null) clearTimeout(scrollLockTimer)
+  if (scrollIdleTimer !== null) clearTimeout(scrollIdleTimer)
 })
 </script>
 
@@ -283,7 +305,7 @@ onBeforeUnmount(() => {
 
           <!-- 歌词：可滚动，点击跳转进度 -->
           <div v-if="lyricLines.length" ref="lyricsEl" class="fp-lyrics" @wheel="pauseAutoScroll"
-            @touchmove="pauseAutoScroll">
+            @touchmove="pauseAutoScroll" @mouseleave="onLyricsLeave">
             <p v-for="(line, idx) in lyricLines" :key="idx" class="fp-lyrics__line"
               :class="{ 'fp-lyrics__line--active': idx === activeLyricIndex }" @click="seekToLyric(line)">
               {{ line.text }}
@@ -641,6 +663,7 @@ onBeforeUnmount(() => {
 
 /* 歌词区：固定在舞台下方，可滚动 */
 .fp-lyrics {
+  position: relative;
   flex: 1;
   min-height: 96px;
   width: min(560px, 100%);
