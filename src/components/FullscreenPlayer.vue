@@ -1071,9 +1071,12 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 768px) {
+
+  /* 播放列表已改为固定定位的抽屉，主区改用弹性单列，确保舞台水平居中 */
   .fp-body {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     gap: 0;
     padding: 0 16px;
   }
@@ -1105,6 +1108,9 @@ onBeforeUnmount(() => {
   .fp-stage {
     order: 1;
     gap: 16px;
+    /* 占满可用宽度与高度，内部内容水平居中 */
+    width: 100%;
+    flex: 1;
   }
 
   .fp-vinyl {
