@@ -375,7 +375,7 @@ onBeforeUnmount(() => {
           </n-icon>
         </span>
       </button>
-      <div class="flex flex-col">
+      <div class="player-info flex flex-col">
         <div class="text-sm font-medium mb-1 player-song-title">{{ currentSong.title }}</div>
         <div class="text-xs player-song-artist">{{ currentSong.artist }}</div>
       </div>
@@ -467,6 +467,12 @@ onBeforeUnmount(() => {
     background-color 0.3s ease, border-color 0.3s ease;
 }
 
+/* 歌曲信息容器：允许收缩，使内部文字能正确省略 */
+.player-info {
+  flex: 1;
+  min-width: 0;
+}
+
 /* 歌曲信息文字 */
 .player-song-title {
   color: var(--app-text);
@@ -474,6 +480,14 @@ onBeforeUnmount(() => {
 
 .player-song-artist {
   color: var(--app-muted);
+}
+
+/* 歌名/歌手单行省略，避免小屏文字溢出 */
+.player-song-title,
+.player-song-artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .player-time {
