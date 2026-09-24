@@ -17,8 +17,10 @@ import {
   VolumeMute,
   Heart,
   HeartOutline,
+  ListOutline,
 } from '@vicons/ionicons5'
 import { musicApi } from '../services/api'
+import { useResponsive } from '../composables/useResponsive'
 
 interface Song {
   id: number
@@ -50,6 +52,21 @@ const togglePlayMode = inject<() => void>('togglePlayMode', () => { })
 const downloadSong = inject<() => void>('downloadSong', () => { })
 
 const listEl = ref<HTMLElement | null>(null)
+
+// 响应式：移动端将播放列表收为可展开的底部抽屉
+const { isMobile } = useResponsive()
+const playlistOpen = ref(false)
+
+// 移动端点击歌曲后收起抽屉
+function handleSelectSong(song: Song) {
+  selectSong(song)
+  if (isMobile.value) playlistOpen.value = false
+}
+
+// 关闭全屏页时复位抽屉状态
+watch(fullscreenOpen, (open) => {
+  if (!open) playlistOpen.value = false
+})
 
 // 默认古典唱片图（无封面时使用）
 const DEFAULT_VINYL =
@@ -204,11 +221,18 @@ function scrollToActiveSong(behavior: ScrollBehavior = 'smooth') {
   })
 }
 
-// 播放列表或当前歌曲变化时，自动将激活项居中
+// 播放列表、当前歌曲变化或抽屉展开时，自动将激活项居中
 watch(
-  [() => playlist.value.length, () => (currentSong.value ? songKeyOf(currentSong.value) : ''), fullscreenOpen],
+  [
+    () => playlist.value.length,
+    () => (currentSong.value ? songKeyOf(currentSong.value) : ''),
+    fullscreenOpen,
+    playlistOpen,
+  ],
   async () => {
     if (!fullscreenOpen.value) return
+    // 移动端抽屉未展开时不滚动（隐藏元素无尺寸）
+    if (isMobile.value && !playlistOpen.value) return
     await nextTick()
     scrollToActiveSong()
   }
@@ -398,24 +422,36 @@ onBeforeUnmount(() => {
           </n-icon>
           <span>正在播放</span>
         </div>
-        <button class="fp-close" type="button" aria-label="收起全屏播放器" @click="close">
-          <n-icon size="22">
-            <ChevronDownOutline />
-          </n-icon>
-        </button>
+        <div class="fp-header__actions">
+          <!-- 移动端：展开/收起播放列表 -->
+          <button v-if="isMobile" class="fp-close" type="button" :aria-label="playlistOpen ? '收起播放列表' : '展开播放列表'"
+            :aria-expanded="playlistOpen" @click="playlistOpen = !playlistOpen">
+            <n-icon size="22">
+              <ListOutline />
+            </n-icon>
+          </button>
+          <button class="fp-close" type="button" aria-label="收起全屏播放器" @click="close">
+            <n-icon size="22">
+              <ChevronDownOutline />
+            </n-icon>
+          </button>
+        </div>
       </header>
+
+      <!-- 移动端：播放列表抽屉遮罩 -->
+      <div v-if="isMobile && playlistOpen" class="fp-playlist-mask" @click="playlistOpen = false"></div>
 
       <!-- 主体 -->
       <div class="fp-body">
-        <!-- 左侧：歌曲列表 -->
-        <aside class="fp-playlist">
+        <!-- 左侧：歌曲列表（移动端收为底部抽屉） -->
+        <aside class="fp-playlist" :class="{ 'fp-playlist--open': isMobile && playlistOpen }">
           <div class="fp-playlist__head">
             <h3>播放列表</h3>
             <span class="fp-playlist__count">{{ playlist.length }} 首</span>
           </div>
           <div ref="listEl" class="fp-playlist__list">
             <button v-for="song in playlist" :key="songKeyOf(song)" type="button" class="fp-song"
-              :class="{ 'fp-song--active': isCurrent(song) }" @click="selectSong(song)">
+              :class="{ 'fp-song--active': isCurrent(song) }" @click="handleSelectSong(song)">
               <span class="fp-song__index">
                 <n-icon v-if="isCurrent(song)" size="14">
                   <component :is="isPlaying ? PauseCircle : PlayCircle" />
@@ -1009,6 +1045,23 @@ onBeforeUnmount(() => {
   transform: scale(1.05);
 }
 
+/* 顶栏右侧操作区 */
+.fp-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 移动端抽屉遮罩 */
+.fp-playlist-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
 /* 响应式 */
 @media (max-width: 1024px) {
   .fp-body {
@@ -1020,17 +1073,38 @@ onBeforeUnmount(() => {
 @media (max-width: 768px) {
   .fp-body {
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr auto;
+    grid-template-rows: 1fr;
+    gap: 0;
+    padding: 0 16px;
   }
 
+  /* 播放列表改为底部滑入抽屉，默认收起 */
   .fp-playlist {
-    order: 2;
-    max-height: 34vh;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1300;
+    max-height: 62vh;
+    border-radius: 20px 20px 0 0;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.5);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .fp-playlist--open {
+    transform: translateY(0);
+  }
+
+  /* 抽屉展开时保证列表可滚动 */
+  .fp-playlist__list {
+    -webkit-overflow-scrolling: touch;
   }
 
   .fp-stage {
     order: 1;
-    gap: 20px;
+    gap: 16px;
   }
 
   .fp-vinyl {
@@ -1056,6 +1130,10 @@ onBeforeUnmount(() => {
 @media (prefers-reduced-motion: reduce) {
   .fp-vinyl__disc {
     animation: none;
+  }
+
+  .fp-playlist {
+    transition: none;
   }
 
   .fullscreen-fade-enter-active,
