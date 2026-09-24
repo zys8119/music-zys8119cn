@@ -380,6 +380,40 @@ onBeforeUnmount(() => {
     font-size: 14px;
 }
 
+/* ===== 移动端适配 ===== */
+@media (max-width: 768px) {
+    .lyrics-panel {
+        right: 12px;
+        left: 12px;
+        align-items: stretch;
+        /* 上移避开紧凑播放条与底部安全区 */
+        bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .lyrics-panel--shifted {
+        bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* 移动端触发按钮铺满，便于点按 */
+    .lyrics-trigger {
+        width: 100%;
+        justify-content: space-between;
+        padding: 10px 14px;
+    }
+
+    .lyrics-trigger__now {
+        max-width: none;
+        flex: 1;
+        text-align: left;
+    }
+
+    /* 面板宽度自适应，避免超出视口 */
+    .lyrics-body {
+        width: 100%;
+        max-height: 52vh;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
 
     .lyrics-panel,

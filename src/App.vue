@@ -12,6 +12,7 @@ import { musicApi } from './services/api'
 import type { Song, Category } from './types/index'
 import { PlayMode } from './types/index'
 import { useTheme } from './composables/useTheme'
+import { useResponsive } from './composables/useResponsive'
 import { darkTheme } from 'naive-ui'
 
 // 主题
@@ -37,6 +38,16 @@ const playerVisible = ref(true)
 
 // 是否展开全屏播放页
 const fullscreenOpen = ref(false)
+
+// 响应式断点
+const { isMobile } = useResponsive()
+// 移动端侧边栏抽屉开关
+const sidebarOpen = ref(false)
+
+// 切到桌面端时自动关闭移动端抽屉
+watch(isMobile, (mobile) => {
+  if (!mobile) sidebarOpen.value = false
+})
 
 // 当前歌词（原始 LRC 文本）
 const currentLyric = ref('')
@@ -427,6 +438,18 @@ function handleCategoryChange(categoryId: number) {
   })
 }
 
+// 移动端：侧边栏选中分类后关闭抽屉
+function handleSidebarCategoryChange(categoryId: number) {
+  handleCategoryChange(categoryId)
+  sidebarOpen.value = false
+}
+
+// 移动端：侧边栏点歌后关闭抽屉
+function handleSidebarPlaySong(song: Song) {
+  playSong(song)
+  sidebarOpen.value = false
+}
+
 // 处理热门榜单点击：跳转到对应榜单分类页
 function handleHotRankingClick(item: { url: string; name: string }) {
   // 找到匹配的导航分类 id 以便高亮，找不到则使用占位 id
@@ -478,13 +501,17 @@ provide('downloadSong', downloadSong)
   <n-config-provider :theme="naiveTheme">
     <n-message-provider>
       <div class="h-100vh flex flex-col overflow-hidden">
-        <MusicHeader :categories="categories" :current-category="currentCategory"
-          @change-category="handleCategoryChange" />
-        <n-layout class="flex-1 overflow-hidden app-layout" has-sider>
-          <MusicSidebar :playlist="playlist" :current-song="currentSong" :categories="categories"
-            :current-category="currentCategory" @play-song="playSong" @change-category="handleCategoryChange"
-            @remove-songs="removeSongs" @clear-playlist="clearPlaylist" />
-          <n-layout-content class="overflow-y-auto p-6 pt-22 pb-24 scrollbar-hide">
+        <MusicHeader :categories="categories" :current-category="currentCategory" :is-mobile="isMobile"
+          @toggle-sidebar="sidebarOpen = !sidebarOpen" @change-category="handleCategoryChange" />
+        <!-- 移动端抽屉遮罩 -->
+        <div v-if="isMobile && sidebarOpen" class="app-sidebar-mask" @click="sidebarOpen = false"></div>
+        <n-layout class="flex-1 overflow-hidden app-layout" :has-sider="!isMobile">
+          <MusicSidebar class="app-sidebar" :class="{ 'app-sidebar--open': isMobile && sidebarOpen }"
+            :is-mobile="isMobile" :playlist="playlist" :current-song="currentSong" :categories="categories"
+            :current-category="currentCategory" @play-song="handleSidebarPlaySong"
+            @change-category="handleSidebarCategoryChange" @remove-songs="removeSongs"
+            @clear-playlist="clearPlaylist" />
+          <n-layout-content class="app-content overflow-y-auto p-6 pt-22 pb-24 scrollbar-hide">
             <HotRankings />
             <router-view />
           </n-layout-content>
@@ -522,5 +549,54 @@ provide('downloadSong', downloadSong)
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
   /* Chrome, Safari and Opera */
+}
+
+/* ===== 移动端布局 ===== */
+
+/* 抽屉遮罩：覆盖内容区，点击关闭 */
+.app-sidebar-mask {
+  position: fixed;
+  inset: var(--app-header-h) 0 0 0;
+  z-index: 200;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* 移动端：侧边栏改为抽屉，从左滑入 */
+@media (max-width: 768px) {
+  .app-sidebar {
+    position: fixed !important;
+    top: var(--app-header-h);
+    bottom: 0;
+    left: 0;
+    z-index: 210;
+    width: 82vw !important;
+    max-width: 320px !important;
+    min-width: 0 !important;
+    /* 固定定位下由 top/bottom 决定高度，避免继承 h-full 溢出 */
+    height: auto !important;
+    flex: 0 0 auto !important;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 2px 0 24px rgba(0, 0, 0, 0.18);
+  }
+
+  .app-sidebar--open {
+    transform: translateX(0);
+  }
+
+  /* 移动端内容区：减小内边距，为播放条预留安全区 */
+  .app-content {
+    padding: 16px !important;
+    padding-top: calc(var(--app-header-h) + 8px) !important;
+    padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-sidebar {
+    transition: none;
+  }
 }
 </style>

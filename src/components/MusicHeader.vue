@@ -7,7 +7,8 @@ import {
   Flash,
   Library,
   Cafe,
-  Leaf
+  Leaf,
+  MenuOutline
 } from '@vicons/ionicons5'
 
 interface Category {
@@ -23,10 +24,14 @@ const message = useMessage()
 const props = defineProps<{
   categories: Category[];
   currentCategory: number | null;
+  // 是否为移动端布局
+  isMobile?: boolean;
 }>()
 
 const emit = defineEmits<{
   'change-category': [categoryId: number];
+  // 移动端：切换侧边栏抽屉
+  'toggle-sidebar': [];
 }>()
 
 const handleCategoryChange = (categoryId: number): void => {
@@ -68,6 +73,12 @@ const getCategoryIcon = (category: Category) => {
 <template>
   <n-layout-header class="header">
     <div class="header-content">
+      <!-- 移动端：汉堡菜单，打开侧边栏抽屉 -->
+      <button v-if="isMobile" class="header-menu-btn" type="button" aria-label="打开菜单" @click="emit('toggle-sidebar')">
+        <n-icon size="22">
+          <MenuOutline />
+        </n-icon>
+      </button>
       <div class="logo">
         <n-icon size="24" color="#1890ff">
           <musical-notes />
@@ -160,7 +171,7 @@ const getCategoryIcon = (category: Category) => {
   left: 0;
   right: 0;
   z-index: 100;
-  height: 64px;
+  height: var(--app-header-h, 64px);
   background: var(--app-surface);
   backdrop-filter: saturate(180%) blur(14px);
   -webkit-backdrop-filter: saturate(180%) blur(14px);
@@ -284,5 +295,72 @@ const getCategoryIcon = (category: Category) => {
 .user-actions :deep(.n-button:hover) {
   color: #1890ff;
   background-color: var(--app-active-bg);
+}
+
+/* 移动端汉堡菜单按钮 */
+.header-menu-btn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--app-text);
+  cursor: pointer;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.header-menu-btn:hover {
+  color: #1890ff;
+  background: var(--app-active-bg);
+}
+
+.header-menu-btn:focus-visible {
+  outline: 2px solid #1890ff;
+  outline-offset: 2px;
+}
+
+/* ===== 移动端适配 ===== */
+@media (max-width: 768px) {
+  .header-content {
+    padding: 0 12px;
+    gap: 6px;
+  }
+
+  /* 移动端隐藏导航图标（改由侧边栏抽屉承载） */
+  .nav-menu {
+    display: none;
+  }
+
+  .logo {
+    margin-right: 8px;
+  }
+
+  /* 移动端隐藏标题文字，仅保留图标，节省空间 */
+  .logo-text {
+    display: none;
+  }
+
+  /* 搜索框自适应剩余宽度 */
+  .search-container {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+
+  /* 移动端仅保留主题切换，隐藏其余图标按钮 */
+  .user-actions :deep(.n-space)>*:not(:first-child) {
+    display: none;
+  }
+
+  /* 触摸目标不小于 40px */
+  .header-menu-btn,
+  .user-actions :deep(.n-button) {
+    min-width: 40px;
+    min-height: 40px;
+  }
 }
 </style>

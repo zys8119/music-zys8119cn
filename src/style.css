@@ -7,12 +7,28 @@
   -ms-overflow-style: none; /* IE and Edge */
 }
 
+/* 移除移动端 300ms 点击延迟，提升触控响应 */
+a,
+button,
+[role="button"],
+input[type="range"],
+.nav-item,
+.sidebar-song,
+.fp-song {
+  touch-action: manipulation;
+}
+
 *::-webkit-scrollbar {
   display: none; /* Chrome, Safari and Opera */
 }
 
 html {
   scroll-behavior: smooth;
+}
+
+body {
+  /* 防止移动端出现横向滚动 */
+  overflow-x: hidden;
 }
 
 /* ===== 主题变量：亮色（默认） ===== */
@@ -27,6 +43,8 @@ html {
   --app-active-bg: #e6f7ff;
   --app-active-text: #1890ff;
   --app-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  /* 顶栏高度（供内容区留白使用） */
+  --app-header-h: 64px;
 }
 
 /* ===== 主题变量：暗色 ===== */
@@ -62,7 +80,9 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background: var(--app-bg);
   color: var(--app-text);
+  /* 使用 dvh 兼容移动端浏览器地址栏伸缩 */
   min-height: 100vh;
+  min-height: 100dvh;
   transition:
     background 0.3s ease,
     color 0.3s ease;
@@ -77,8 +97,22 @@ body {
 #app {
   width: 100%;
   height: 100vh;
+  /* 移动端使用动态视口高度，避免被浏览器地址栏裁切 */
+  height: 100dvh;
   display: flex;
   flex-direction: column;
+}
+
+/* ===== 移动端适配 ===== */
+@media (max-width: 768px) {
+  :root {
+    --app-header-h: 56px;
+  }
+
+  /* 移动端字体略增，提升可读性 */
+  body {
+    font-size: 15px;
+  }
 }
 
 /* ===== 暗色模式下覆盖 UnoCSS 文字工具类，保证对比度 ===== */

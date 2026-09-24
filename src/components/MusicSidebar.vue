@@ -27,6 +27,8 @@ const props = defineProps<{
   currentSong: Song | null;
   categories: Category[];
   currentCategory: number | null;
+  // 是否为移动端（抽屉模式）
+  isMobile?: boolean;
 }>()
 
 const emit = defineEmits<{
@@ -242,7 +244,7 @@ async function toggleFavorite(song: Song, event: Event) {
 <template>
   <n-layout-sider bordered collapse-mode="width" :collapsed-width="64" :width="240" :native-scrollbar="false"
     class="sidebar h-full flex flex-col">
-    <div class="flex flex-col h-full min-h-0 pt-16">
+    <div class="sidebar-inner flex flex-col h-full min-h-0" :class="isMobile ? 'pt-2' : 'pt-16'">
       <div class="flex-shrink-0">
         <n-menu :value="activeKey" :options="menuOptions" :collapsed-width="64" :collapsed-icon-size="22"
           @update:value="handleMenuClick" />
@@ -434,5 +436,30 @@ async function toggleFavorite(song: Song, event: Event) {
 :deep(.n-list-item:hover) {
   background-color: var(--app-hover);
   box-shadow: inset 0 0 0 1px rgba(24, 144, 255, 0.12);
+}
+
+/* ===== 移动端适配 ===== */
+@media (max-width: 768px) {
+
+  /* 抽屉模式下不显示桌面端占位内边距 */
+  .sidebar-inner {
+    padding-top: 8px;
+  }
+
+  /* 触摸目标增大，提升可点性 */
+  :deep(.n-list-item) {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  /* 移动端始终显示删除按钮（无 hover 状态） */
+  :deep(.n-list-item .opacity-0) {
+    opacity: 1 !important;
+  }
+
+  /* 移动端列表项内部间距收紧 */
+  .sidebar-song__title {
+    font-size: 14px;
+  }
 }
 </style>

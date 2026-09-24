@@ -363,7 +363,7 @@ onBeforeUnmount(() => {
         <div class="player-mini__bar" :style="{ width: progress + '%' }"></div>
       </div>
     </div>
-    <div class="flex items-center w-30%">
+    <div class="player-left flex items-center w-30%">
       <button class="player-cover-btn" type="button" :aria-label="fullscreenOpen ? '关闭全屏播放页' : '打开全屏播放页'"
         @click="toggleFullscreen">
         <div class="w-12 h-12 rounded-lg overflow-hidden mr-3 player-cover">
@@ -381,8 +381,8 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div class="flex-1 flex flex-col items-center">
-      <div class="flex items-center mb-2">
+    <div class="player-center flex-1 flex flex-col items-center">
+      <div class="player-controls flex items-center mb-2">
         <!-- 收藏按钮 -->
         <n-button quaternary circle :title="isFavorited ? '取消收藏' : '收藏'" :aria-label="isFavorited ? '取消收藏' : '收藏'"
           @click="toggleFavorite">
@@ -426,14 +426,14 @@ onBeforeUnmount(() => {
         </n-button>
       </div>
 
-      <div class="flex items-center w-full px-4">
+      <div class="player-progress flex items-center w-full px-4">
         <span class="text-xs w-10 text-center player-time">{{ formattedCurrentTime }}</span>
         <n-slider :value="progress" :step="0.1" @update:value="handleSeek" />
         <span class="text-xs w-10 text-center player-time">{{ formattedDuration }}</span>
       </div>
     </div>
 
-    <div class="flex items-center justify-end w-20%">
+    <div class="player-right flex items-center justify-end w-20%">
       <n-button quaternary circle @click="emit('download-song')" :disabled="!currentSong" title="下载歌曲">
         <template #icon>
           <n-icon size="20">
@@ -614,6 +614,72 @@ onBeforeUnmount(() => {
 @media (prefers-reduced-motion: reduce) {
   .music-player-bar {
     transition: none;
+  }
+}
+
+/* ===== 移动端适配 ===== */
+@media (max-width: 768px) {
+
+  /* 紧凑高度，并预留底部安全区 */
+  .music-player-bar {
+    height: 72px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* 左侧歌曲信息自适应剩余宽度 */
+  .player-left {
+    width: auto !important;
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* 移动端隐藏右侧下载/音量控件，避免拥挤 */
+  .player-right {
+    display: none !important;
+  }
+
+  /* 中央控制区仅保留上一首/播放/下一首，去掉进度条 */
+  .player-center {
+    flex: 0 0 auto !important;
+    width: auto !important;
+  }
+
+  .player-center .player-progress {
+    display: none !important;
+  }
+
+  /* 缩小控制按钮间距与尺寸 */
+  .player-controls {
+    gap: 2px;
+    margin-bottom: 0 !important;
+  }
+
+  .player-controls :deep(.n-button) {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  /* 封面缩小 */
+  .player-cover {
+    width: 40px !important;
+    height: 40px !important;
+    margin-right: 10px !important;
+  }
+
+  .player-cover-mask {
+    width: 40px;
+    height: 40px;
+  }
+
+  .player-song-title {
+    font-size: 13px;
+  }
+
+  /* 隐藏态迷你条适配安全区 */
+  .player-mini {
+    left: 60px;
   }
 }
 </style>
