@@ -1119,11 +1119,58 @@ onBeforeUnmount(() => {
   .fp-controls-row {
     flex-direction: column;
     gap: 12px;
+    /* 音量绝对定位已取消，此处允许换行避免溢出 */
+    flex-wrap: wrap;
+  }
+
+  /* 控制区占满宽度并均匀分布，避免按钮超出屏幕 */
+  .fp-controls {
+    width: 100%;
+    justify-content: space-between;
+    gap: 4px;
+    /* 极窄屏时允许换行，保证下载等按钮不被裁切 */
+    flex-wrap: wrap;
+  }
+
+  /* 缩小按钮尺寸，保证小屏也能完整展示 */
+  .fp-btn {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+  }
+
+  .fp-btn--primary {
+    width: 56px;
+    height: 56px;
+  }
+
+  /* 底部内边距收紧，为播放条让出空间 */
+  .fp-footer {
+    padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    gap: 10px;
   }
 
   .fp-volume {
     position: static;
-    width: min(320px, 80%);
+    width: 100%;
+    max-width: 320px;
+  }
+}
+
+/* 超小屏（如 iPhone SE 竖屏）进一步压缩，避免横向溢出 */
+@media (max-width: 380px) {
+  .fp-controls {
+    gap: 2px;
+  }
+
+  .fp-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .fp-btn--primary {
+    width: 52px;
+    height: 52px;
   }
 }
 
