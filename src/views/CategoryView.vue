@@ -100,7 +100,19 @@ const { sentinelEl } = useInfiniteScroll({
 
 // 根据路由 query 获取目标页面 URL
 const targetUrl = computed((): string => (route.query.url as string) || currentCategory.value?.url || '')
+
+// 原始页面类型（用于判断是否可批量播放等）
 const pageType = computed((): string => (route.query.type as string) || currentCategory.value?.type || 'list')
+
+// 是否处于下钻状态（点击歌手/歌单/电台后的详情列表）
+const isDrilldown = ref(false)
+
+// 是否以卡片网格展示：仅顶层歌手/歌单/电台使用；下钻后的歌曲列表统一用列表（与新歌榜一致）
+const isGridLayout = computed(
+  () =>
+    !isDrilldown.value &&
+    (pageType.value === 'singer' || pageType.value === 'playlist' || pageType.value === 'radio')
+)
 
 /**
  * 统一处理列表响应（新结构 { list, pagination }，兼容旧的数组结构）。
@@ -155,7 +167,8 @@ function handleItemClick(item: ListItem, index: number) {
     return
   }
 
-  // 歌手/歌单/电台：加载其详情页列表
+  // 歌手/歌单/电台：下钻到其详情页，后续内容按列表展示（与新歌榜一致）
+  isDrilldown.value = true
   loadList(item.url)
 }
 
@@ -168,8 +181,13 @@ function handlePageClick(link: PageLink, event: Event) {
 }
 
 // ===== 多选 / 全选 =====
-// 是否仅歌曲/MV 可选中（歌手/歌单/电台为下钻类目，不支持批量播放）
-const isPlayable = computed(() => pageType.value !== 'singer' && pageType.value !== 'playlist' && pageType.value !== 'radio')
+// 是否可批量播放：下钻后的歌曲列表与新歌榜一致，支持全选；
+// 顶层歌手/歌单/电台为下钻类目，不支持批量播放。
+const isPlayable = computed(
+  () =>
+    isDrilldown.value ||
+    (pageType.value !== 'singer' && pageType.value !== 'playlist' && pageType.value !== 'radio')
+)
 
 // 已选中的行索引
 const selectedIndexes = ref<Set<number>>(new Set())
@@ -260,7 +278,9 @@ function handleKeydown(event: KeyboardEvent) {
   }
 }
 
+// 切分类/路由时退出下钻状态，恢复顶层网格展示
 watch(targetUrl, () => {
+  isDrilldown.value = false
   fetchList()
 }, { immediate: true })
 
@@ -307,8 +327,8 @@ onBeforeUnmount(() => {
       </n-empty>
     </n-card>
 
-    <!-- 歌手类：头像网格 -->
-    <div v-else-if="pageType === 'singer'" class="singer-grid">
+    <!-- 歌手类：头像网格（仅顶层展示） -->
+    <div v-else-if="isGridLayout && pageType === 'singer'" class="singer-grid">
       <n-grid :cols="6" :x-gap="16" :y-gap="16">
         <n-grid-item v-for="(item, index) in listItems" :key="index">
           <div class="singer-card" @click="handleItemClick(item, index)">
@@ -321,8 +341,8 @@ onBeforeUnmount(() => {
       </n-grid>
     </div>
 
-    <!-- 歌单/电台：封面卡片网格 -->
-    <div v-else-if="pageType === 'playlist' || pageType === 'radio'" class="cover-grid">
+    <!-- 歌单/电台：封面卡片网格（仅顶层展示） -->
+    <div v-else-if="isGridLayout" class="cover-grid">
       <n-grid :cols="5" :x-gap="16" :y-gap="16">
         <n-grid-item v-for="(item, index) in listItems" :key="index">
           <div class="cover-card" @click="handleItemClick(item, index)">
@@ -333,7 +353,7 @@ onBeforeUnmount(() => {
       </n-grid>
     </div>
 
-    <!-- 歌曲/榜单/MV：列表（支持全选/多选播放） -->
+    <!-- 歌曲/榜单/MV：列表（支持全选/多选播放）；下钻后的歌曲列表同样使用此列表 -->
     <template v-else>
       <div v-if="isPlayable" class="list-toolbar !justify-start">
         <n-checkbox :checked="isAllSelected" :indeterminate="isIndeterminate" @update:checked="toggleSelectAll">
@@ -378,7 +398,7 @@ onBeforeUnmount(() => {
       <template v-for="(link, idx) in pagination.items" :key="`${link.label}-${idx}`">
         <span v-if="link.current" class="page-link current" aria-current="page">{{ link.label }}</span>
         <a v-else-if="link.url" class="page-link" :href="link.url" @click="handlePageClick(link, $event)">{{ link.label
-          }}</a>
+        }}</a>
         <span v-else class="page-link disabled">{{ link.label }}</span>
       </template>
     </nav>
