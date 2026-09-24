@@ -13,6 +13,7 @@ import type { Song, Category } from './types/index'
 import { PlayMode } from './types/index'
 import { useTheme } from './composables/useTheme'
 import { useResponsive } from './composables/useResponsive'
+import { useMediaSession } from './composables/useMediaSession'
 import { darkTheme } from 'naive-ui'
 
 // 主题
@@ -272,6 +273,29 @@ function seek(delta: number) {
   const newTime = currentTime.value + delta
   seekTo(newTime)
 }
+
+// 接入 Media Session：让蓝牙耳机/车载/锁屏的媒体按键控制播放
+useMediaSession({
+  currentSong,
+  isPlaying,
+  currentTime,
+  duration,
+  // 蓝牙“播放”按键：有歌曲则开始播放
+  play: () => {
+    if (!currentSong.value) return
+    isPlaying.value = true
+  },
+  // 蓝牙“暂停”按键
+  pause: () => {
+    isPlaying.value = false
+  },
+  // 蓝牙“下一首/上一首”按键
+  next: () => playNext(),
+  prev: () => playPrev(),
+  // 蓝牙进度控制（快进/快退/拖动进度）
+  seekTo: (time: number) => seekTo(time),
+  seekBy: (delta: number) => seek(delta),
+})
 
 // 切换播放模式
 function togglePlayMode() {
