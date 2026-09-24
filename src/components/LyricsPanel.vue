@@ -369,22 +369,33 @@ onBeforeUnmount(() => {
         border-color 0.3s ease, box-shadow 0.2s ease;
 }
 
-/* 实时展示的当前激活歌词 */
+/* 实时展示的当前激活歌词：彩色流动渐变文字 */
 .lyrics-trigger__now {
     min-width: 0;
     max-width: 220px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: #1890ff;
     font-weight: 600;
-    transition: color 0.25s ease, opacity 0.25s ease;
+    background: linear-gradient(90deg, #22c55e, #38bdf8, #a855f7, #f472b6, #22c55e);
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    animation: lyric-flow 6s linear infinite;
+    transition: opacity 0.25s ease;
 }
 
-/* 暂无歌词时回退为普通标签样式 */
+/* 暂无歌词时回退为普通标签样式（移除渐变，恢复常规文字色） */
 .lyrics-trigger__now--empty {
+    background: none;
+    -webkit-background-clip: border-box;
+    background-clip: border-box;
     color: var(--app-text);
+    -webkit-text-fill-color: var(--app-text);
     font-weight: 500;
+    animation: none;
 }
 
 .lyrics-trigger__icon {
@@ -577,6 +588,11 @@ onBeforeUnmount(() => {
     .lyrics-line--active {
         transform: none;
         /* 降低动效：保留彩色但停止流动 */
+        animation: none;
+    }
+
+    /* 触发按钮上的激活歌词同样停止流动 */
+    .lyrics-trigger__now {
         animation: none;
     }
 }
