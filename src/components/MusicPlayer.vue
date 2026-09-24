@@ -649,9 +649,22 @@ onBeforeUnmount(() => {
     min-width: 0;
   }
 
-  /* 移动端隐藏右侧下载/音量控件，避免拥挤 */
+  /* 移动端右侧仅保留下载按钮（隐藏静音与音量滑块，避免拥挤） */
   .player-right {
+    flex: 0 0 auto !important;
+    width: auto !important;
+  }
+
+  /* 隐藏第二个按钮（静音）与音量滑块 */
+  .player-right :deep(.n-button:nth-child(2)),
+  .player-right :deep(.n-slider) {
     display: none !important;
+  }
+
+  /* 保证下载按钮触摸目标不小于 40px */
+  .player-right :deep(.n-button) {
+    min-width: 40px;
+    min-height: 40px;
   }
 
   /* 中央控制区仅保留上一首/播放/下一首，去掉进度条 */
