@@ -428,7 +428,8 @@ onBeforeUnmount(() => {
 
       <div class="player-progress flex items-center w-full px-4">
         <span class="text-xs w-10 text-center player-time">{{ formattedCurrentTime }}</span>
-        <n-slider :value="progress" :step="0.1" @update:value="handleSeek" />
+        <n-slider class="player-slider player-slider--progress" :value="progress" :step="0.1"
+          @update:value="handleSeek" />
         <span class="text-xs w-10 text-center player-time">{{ formattedDuration }}</span>
       </div>
     </div>
@@ -450,7 +451,7 @@ onBeforeUnmount(() => {
         </template>
       </n-button>
 
-      <n-slider :value="volume" :step="0.01" :min="0" :max="1" class="w-20"
+      <n-slider class="player-slider player-slider--volume w-20" :value="volume" :step="0.01" :min="0" :max="1"
         @update:value="(val) => emit('update:volume', val)" />
     </div>
   </div>
@@ -492,6 +493,66 @@ onBeforeUnmount(() => {
 
 .player-time {
   color: var(--app-muted);
+}
+
+/* ===== 进度条 / 音量条美化 ===== */
+/* 通过覆盖 Naive UI 的滑块主题变量统一视觉风格 */
+.player-slider {
+  --n-rail-color: rgba(24, 144, 255, 0.16);
+  --n-rail-color-hover: rgba(24, 144, 255, 0.24);
+  --n-fill-color: transparent;
+  --n-fill-color-hover: transparent;
+  --n-handle-color: #ffffff;
+  --n-handle-box-shadow: 0 2px 8px rgba(24, 144, 255, 0.45);
+  --n-handle-box-shadow-hover: 0 3px 12px rgba(24, 144, 255, 0.6);
+}
+
+/* 轨道：更细、圆角，并使用主题色渐变作为已播放部分 */
+.player-slider :deep(.n-slider-rail) {
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--app-border);
+}
+
+.player-slider :deep(.n-slider-rail__fill) {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #22c55e, #38bdf8);
+  transition: width 0.1s linear;
+}
+
+/* 拖拽手柄：白点 + 主题色光晕，悬停轻微放大 */
+.player-slider :deep(.n-slider-handle) {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #1890ff;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.45);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.player-slider :deep(.n-slider-handle:hover),
+.player-slider :deep(.n-slider-handle.n-slider-handle--active) {
+  transform: scale(1.15);
+  box-shadow: 0 3px 12px rgba(24, 144, 255, 0.6);
+}
+
+/* 音量条：更紧凑，弱化底色 */
+.player-slider--volume :deep(.n-slider-rail) {
+  height: 5px;
+}
+
+.player-slider--volume :deep(.n-slider-handle) {
+  width: 12px;
+  height: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-slider :deep(.n-slider-handle) {
+    transition: none;
+  }
 }
 
 /* 隐藏态：向下移出视口（仅位移，保留把手按钮可见可点） */

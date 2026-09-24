@@ -491,15 +491,33 @@ onBeforeUnmount(() => {
         font-weight 0.2s ease;
 }
 
-.lyrics-line:hover {
+/* 悬停高亮（激活行使用渐变文字，不覆盖其背景） */
+.lyrics-line:not(.lyrics-line--active):hover {
     color: var(--app-text);
     background: var(--app-hover);
 }
 
 .lyrics-line--active {
-    color: #1890ff;
     font-weight: 600;
     transform: scale(1.04);
+    /* 彩色流动渐变文字：背景裁切到文字 */
+    background: linear-gradient(90deg, #22c55e, #38bdf8, #a855f7, #f472b6, #22c55e);
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    animation: lyric-flow 6s linear infinite;
+}
+
+@keyframes lyric-flow {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    100% {
+        background-position: 300% 50%;
+    }
 }
 
 .lyrics-empty {
@@ -558,6 +576,8 @@ onBeforeUnmount(() => {
 
     .lyrics-line--active {
         transform: none;
+        /* 降低动效：保留彩色但停止流动 */
+        animation: none;
     }
 }
 </style>
