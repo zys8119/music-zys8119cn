@@ -5,6 +5,8 @@ import { NList, NListItem, NThing, NEmpty, NCard } from 'naive-ui'
 import { SearchOutline, PlayCircleOutline, CloseOutline } from '@vicons/ionicons5'
 import { NIcon } from 'naive-ui'
 import { musicApi } from '../services/api'
+import { useResponsive } from '../composables/useResponsive'
+import { useInfiniteScroll } from '../composables/useInfiniteScroll'
 
 interface Song {
   id: number
@@ -51,7 +53,16 @@ const heading = ref('')
 const total = ref(0)
 const pagination = ref<Pagination>({ current: 1, total: 1, items: [] })
 const isLoading = ref(false)
+// 上拉加载更多时的加载态（与首屏骨架屏区分）
+const isLoadingMore = ref(false)
 const loadError = ref('')
+
+// 移动端使用滚动分页（上拉加载更多）
+const { isMobile } = useResponsive()
+// 已加载到的页码（移动端累加翻页）
+const loadedPage = ref(1)
+// 是否还有下一页（依据总页数判断）
+const hasMore = computed(() => loadedPage.value < (pagination.value.total || 1))
 
 // 搜索历史
 interface HistoryItem {
@@ -93,7 +104,10 @@ function goSearch(kw: string) {
   router.push({ name: 'search', query: { wd: kw } })
 }
 
-async function loadSearch() {
+/**
+ * 加载搜索结果。append 为 true 时追加（移动端上拉加载更多），否则替换。
+ */
+async function loadSearch(append = false) {
   if (!keyword.value) {
     listItems.value = []
     heading.value = ''
@@ -102,32 +116,52 @@ async function loadSearch() {
     loadHistory()
     return
   }
-  isLoading.value = true
+  // 目标页码：追加时取下一页，否则取路由页码
+  const targetPage = append ? loadedPage.value + 1 : page.value
+  if (append) isLoadingMore.value = true
+  else isLoading.value = true
   loadError.value = ''
   // 记录搜索历史（仅第一页时记录，避免翻页重复写入）
-  if (page.value === 1) {
+  if (targetPage === 1) {
     musicApi.addSearchHistory(keyword.value).catch((e) => console.error('记录搜索历史失败', e))
   }
   try {
-    const res = await musicApi.search(keyword.value, page.value)
+    const res = await musicApi.search(keyword.value, targetPage)
     if (res.code === 200 && res.data) {
-      listItems.value = Array.isArray(res.data.list) ? res.data.list : []
+      const list = Array.isArray(res.data.list) ? res.data.list : []
+      listItems.value = append ? [...listItems.value, ...list] : list
       heading.value = res.data.heading || `${keyword.value} 结果列表`
       total.value = res.data.total || 0
-      pagination.value = res.data.pagination || { current: page.value, total: 1, items: [] }
-    } else {
+      pagination.value = res.data.pagination || { current: targetPage, total: 1, items: [] }
+      loadedPage.value = pagination.value.current || targetPage
+    } else if (!append) {
       listItems.value = []
       pagination.value = { current: 1, total: 1, items: [] }
     }
   } catch (error) {
     console.error('搜索出错:', error)
     loadError.value = (error as Error).message || '搜索失败'
-    listItems.value = []
-    pagination.value = { current: 1, total: 1, items: [] }
+    if (!append) {
+      listItems.value = []
+      pagination.value = { current: 1, total: 1, items: [] }
+    }
   } finally {
     isLoading.value = false
+    isLoadingMore.value = false
   }
 }
+
+// 上拉加载下一页
+function loadMore() {
+  if (!hasMore.value || isLoadingMore.value) return
+  loadSearch(true)
+}
+
+const { sentinelEl } = useInfiniteScroll({
+  hasMore: () => isMobile.value && hasMore.value,
+  isLoading: () => isLoading.value || isLoadingMore.value,
+  onLoadMore: loadMore,
+})
 
 // 播放搜索结果中的歌曲
 function handleItemClick(item: ListItem, index: number) {
@@ -229,8 +263,8 @@ watch([keyword, page], () => {
         </n-list-item>
       </n-list>
 
-      <!-- 分页：固定定位在底部（完全参考站点 .page 结构） -->
-      <nav v-if="!isLoading && listItems.length > 0 && pagination.items.length > 0" class="page"
+      <!-- 分页：桌面端显示固定页码；移动端改用上拉加载更多 -->
+      <nav v-if="!isMobile && !isLoading && listItems.length > 0 && pagination.items.length > 0" class="page"
         :style="{ bottom: pageBottom }" aria-label="分页导航">
         <template v-for="(link, idx) in pagination.items" :key="`${link.label}-${idx}`">
           <span v-if="link.current" class="page-link current" aria-current="page">{{ link.label }}</span>
@@ -239,6 +273,16 @@ watch([keyword, page], () => {
           <span v-else class="page-link disabled">{{ link.label }}</span>
         </template>
       </nav>
+
+      <!-- 移动端：上拉加载更多的哨兵与状态提示 -->
+      <div v-if="isMobile && listItems.length > 0" class="mobile-only-infinite">
+        <div ref="sentinelEl" class="infinite-sentinel"></div>
+        <div v-if="isLoadingMore" class="infinite-status">
+          <span class="infinite-status__spinner"></span>
+          <span>正在加载…</span>
+        </div>
+        <div v-else-if="!hasMore" class="infinite-status">已加载全部</div>
+      </div>
     </template>
   </div>
 </template>

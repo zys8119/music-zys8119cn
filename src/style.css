@@ -162,6 +162,50 @@ html.dark .border-gray-200,
 html.dark .border-gray-100 {
   border-color: var(--app-border) !important;
 }
+/* ===== 上拉加载更多（移动端滚动分页） ===== */
+.infinite-sentinel {
+  height: 1px;
+}
+
+.infinite-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 0 8px;
+  font-size: 13px;
+  color: var(--app-muted);
+}
+
+/* 加载中的旋转指示器 */
+.infinite-status__spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--app-border);
+  border-top-color: #1890ff;
+  animation: infinite-spin 0.8s linear infinite;
+}
+
+@keyframes infinite-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 上拉加载提示仅在移动端显示 */
+@media (min-width: 769px) {
+  .mobile-only-infinite {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .infinite-status__spinner {
+    animation: none;
+  }
+}
+
 /* 保留一些必要的样式类，其他使用UnoCSS替代 */
 .song-item {
   transition: background-color 0.2s;

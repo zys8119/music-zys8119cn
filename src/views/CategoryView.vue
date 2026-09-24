@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { NList, NListItem, NThing, NEmpty, NCard, NGrid, NGridItem, NCheckbox, NButton, NIcon } from 'naive-ui'
 import { PlayCircleOutline } from '@vicons/ionicons5'
 import { musicApi } from '../services/api'
+import { useResponsive } from '../composables/useResponsive'
+import { useInfiniteScroll, getNextPageLink } from '../composables/useInfiniteScroll'
 
 interface Song {
   id: number;
@@ -71,41 +73,70 @@ const categoryName = computed((): string => {
 // 列表数据
 const listItems = ref<ListItem[]>([])
 const isLoading = ref(false)
+// 上拉加载更多时的加载态（与首屏骨架屏区分）
+const isLoadingMore = ref(false)
 const loadError = ref('')
 const pagination = ref<Pagination>({ current: 1, total: 1, items: [] })
 const activeUrl = ref('')
+
+// 移动端使用滚动分页（上拉加载更多）
+const { isMobile } = useResponsive()
+
+// 下一页链接（移动端上拉加载使用）
+const nextPageLink = computed(() => getNextPageLink(pagination.value))
+const hasMore = computed(() => !!nextPageLink.value)
+
+// 上拉加载下一页（仅追加，不切换分类/下钻）
+function loadMore() {
+  if (!nextPageLink.value || isLoadingMore.value) return
+  loadList(nextPageLink.value.url, true)
+}
+
+const { sentinelEl } = useInfiniteScroll({
+  hasMore: () => isMobile.value && hasMore.value,
+  isLoading: () => isLoading.value || isLoadingMore.value,
+  onLoadMore: loadMore,
+})
 
 // 根据路由 query 获取目标页面 URL
 const targetUrl = computed((): string => (route.query.url as string) || currentCategory.value?.url || '')
 const pageType = computed((): string => (route.query.type as string) || currentCategory.value?.type || 'list')
 
-// 统一处理列表响应（新结构 { list, pagination }，兼容旧的数组结构）
-async function loadList(url: string) {
-  isLoading.value = true
+/**
+ * 统一处理列表响应（新结构 { list, pagination }，兼容旧的数组结构）。
+ * append 为 true 时追加到现有列表（移动端上拉加载更多），否则替换。
+ */
+async function loadList(url: string, append = false) {
+  if (append) isLoadingMore.value = true
+  else isLoading.value = true
   loadError.value = ''
   try {
     const res = await musicApi.getList(url)
     if (res.code === 200 && res.data) {
       const data = res.data
       if (Array.isArray(data)) {
-        listItems.value = data
+        listItems.value = append ? [...listItems.value, ...data] : data
         pagination.value = { current: 1, total: 1, items: [] }
       } else {
-        listItems.value = Array.isArray(data.list) ? data.list : []
+        const list = Array.isArray(data.list) ? data.list : []
+        listItems.value = append ? [...listItems.value, ...list] : list
         pagination.value = data.pagination || { current: 1, total: 1, items: [] }
       }
       activeUrl.value = url
-    } else {
+    } else if (!append) {
       listItems.value = []
       pagination.value = { current: 1, total: 1, items: [] }
     }
   } catch (error) {
     console.error('获取列表出错:', error)
     loadError.value = (error as Error).message || '加载失败'
-    listItems.value = []
-    pagination.value = { current: 1, total: 1, items: [] }
+    if (!append) {
+      listItems.value = []
+      pagination.value = { current: 1, total: 1, items: [] }
+    }
   } finally {
     isLoading.value = false
+    isLoadingMore.value = false
   }
 }
 
@@ -341,16 +372,26 @@ onBeforeUnmount(() => {
       </n-list>
     </template>
 
-    <!-- 分页：固定定位在底部（完全参考站点 .page 结构） -->
-    <nav v-if="!isLoading && listItems.length > 0 && pagination.items.length > 0" class="page"
+    <!-- 分页：桌面端显示固定页码；移动端改用上拉加载更多 -->
+    <nav v-if="!isMobile && !isLoading && listItems.length > 0 && pagination.items.length > 0" class="page"
       :style="{ bottom: pageBottom }" aria-label="分页导航">
       <template v-for="(link, idx) in pagination.items" :key="`${link.label}-${idx}`">
         <span v-if="link.current" class="page-link current" aria-current="page">{{ link.label }}</span>
         <a v-else-if="link.url" class="page-link" :href="link.url" @click="handlePageClick(link, $event)">{{ link.label
-        }}</a>
+          }}</a>
         <span v-else class="page-link disabled">{{ link.label }}</span>
       </template>
     </nav>
+
+    <!-- 移动端：上拉加载更多的哨兵与状态提示 -->
+    <div v-if="isMobile && listItems.length > 0" class="mobile-only-infinite">
+      <div ref="sentinelEl" class="infinite-sentinel"></div>
+      <div v-if="isLoadingMore" class="infinite-status">
+        <span class="infinite-status__spinner"></span>
+        <span>正在加载…</span>
+      </div>
+      <div v-else-if="!hasMore" class="infinite-status">已加载全部</div>
+    </div>
   </div>
 </template>
 

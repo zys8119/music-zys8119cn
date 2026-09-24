@@ -3,6 +3,8 @@ import { ref, computed, inject, onMounted } from 'vue'
 import { NList, NListItem, NThing, NEmpty, NCard, NIcon } from 'naive-ui'
 import { PlayCircleOutline } from '@vicons/ionicons5'
 import { musicApi } from '../services/api'
+import { useResponsive } from '../composables/useResponsive'
+import { useInfiniteScroll, getNextPageLink } from '../composables/useInfiniteScroll'
 
 interface Song {
   id: number
@@ -32,7 +34,7 @@ interface Pagination {
   items: PageLink[]
 }
 
-const addSongsToPlaylist = inject<(songs: Song[]) => void>('addSongsToPlaylist', () => {})
+const addSongsToPlaylist = inject<(songs: Song[]) => void>('addSongsToPlaylist', () => { })
 
 // 新歌榜地址（目标站点）
 const NEW_SONG_URL = 'https://www.22a5.com/list/new.html'
@@ -40,35 +42,64 @@ const NEW_SONG_URL = 'https://www.22a5.com/list/new.html'
 const listItems = ref<ListItem[]>([])
 const pagination = ref<Pagination>({ current: 1, total: 1, items: [] })
 const isLoading = ref(false)
+// 上拉加载更多时的加载态（与首屏骨架屏区分）
+const isLoadingMore = ref(false)
 const loadError = ref('')
 const activeUrl = ref(NEW_SONG_URL)
+
+// 移动端使用滚动分页（上拉加载更多）
+const { isMobile } = useResponsive()
 
 // 仅保留歌曲条目
 const songs = computed(() => listItems.value.filter((i) => i.type === 'song' || i.type === 'mv'))
 
-async function loadList(url: string) {
-  isLoading.value = true
+// 下一页链接（移动端上拉加载使用）
+const nextPageLink = computed(() => getNextPageLink(pagination.value))
+const hasMore = computed(() => !!nextPageLink.value)
+
+/**
+ * 加载列表。append 为 true 时追加到现有列表（上拉加载更多），否则替换。
+ */
+async function loadList(url: string, append = false) {
+  if (append) isLoadingMore.value = true
+  else isLoading.value = true
   loadError.value = ''
   try {
     const res = await musicApi.getList(url)
     if (res.code === 200 && res.data) {
       const data = res.data
-      listItems.value = Array.isArray(data.list) ? data.list : []
+      const list = Array.isArray(data.list) ? data.list : []
+      listItems.value = append ? [...listItems.value, ...list] : list
       pagination.value = data.pagination || { current: 1, total: 1, items: [] }
       activeUrl.value = url
-    } else {
+    } else if (!append) {
       listItems.value = []
       pagination.value = { current: 1, total: 1, items: [] }
     }
   } catch (error) {
     console.error('获取新歌榜出错:', error)
     loadError.value = (error as Error).message || '加载失败'
-    listItems.value = []
-    pagination.value = { current: 1, total: 1, items: [] }
+    if (!append) {
+      listItems.value = []
+      pagination.value = { current: 1, total: 1, items: [] }
+    }
   } finally {
     isLoading.value = false
+    isLoadingMore.value = false
   }
 }
+
+// 上拉加载下一页
+function loadMore() {
+  if (!nextPageLink.value || isLoadingMore.value) return
+  loadList(nextPageLink.value.url, true)
+}
+
+const { sentinelEl } = useInfiniteScroll({
+  hasMore: () => isMobile.value && hasMore.value,
+  isLoading: () => isLoading.value || isLoadingMore.value,
+  onLoadMore: loadMore,
+})
 
 function toSong(item: ListItem, index: number): Song {
   return {
@@ -107,7 +138,9 @@ onMounted(() => loadList(NEW_SONG_URL))
       <span class="view-subtitle">新歌榜 · 共 {{ pagination.total }} 页</span>
       <n-button v-if="songs.length" type="primary" size="small" class="play-all" @click="playAll">
         <template #icon>
-          <n-icon><PlayCircleOutline /></n-icon>
+          <n-icon>
+            <PlayCircleOutline />
+          </n-icon>
         </template>
         播放全部
       </n-button>
@@ -138,7 +171,9 @@ onMounted(() => loadList(NEW_SONG_URL))
           <template #avatar>
             <img v-if="item.img" :src="item.img" class="song-avatar" alt="cover" />
             <div v-else class="hot-song-avatar">
-              <n-icon size="22"><PlayCircleOutline /></n-icon>
+              <n-icon size="22">
+                <PlayCircleOutline />
+              </n-icon>
             </div>
           </template>
           <template #header>
@@ -151,14 +186,26 @@ onMounted(() => loadList(NEW_SONG_URL))
       </n-list-item>
     </n-list>
 
-    <!-- 分页 -->
-    <nav v-if="!isLoading && songs.length > 0 && pagination.items.length > 0" class="page" aria-label="分页导航">
+    <!-- 分页：桌面端显示页码；移动端改用上拉加载更多 -->
+    <nav v-if="!isMobile && !isLoading && songs.length > 0 && pagination.items.length > 0" class="page"
+      aria-label="分页导航">
       <template v-for="(link, idx) in pagination.items" :key="link.label + '-' + idx">
         <span v-if="link.current" class="page-link current" aria-current="page">{{ link.label }}</span>
-        <a v-else-if="link.url" class="page-link" :href="link.url" @click="handlePageClick(link, $event)">{{ link.label }}</a>
+        <a v-else-if="link.url" class="page-link" :href="link.url" @click="handlePageClick(link, $event)">{{ link.label
+          }}</a>
         <span v-else class="page-link disabled">{{ link.label }}</span>
       </template>
     </nav>
+
+    <!-- 移动端：上拉加载更多的哨兵与状态提示 -->
+    <div v-if="isMobile && songs.length > 0" class="mobile-only-infinite">
+      <div ref="sentinelEl" class="infinite-sentinel"></div>
+      <div v-if="isLoadingMore" class="infinite-status">
+        <span class="infinite-status__spinner"></span>
+        <span>正在加载…</span>
+      </div>
+      <div v-else-if="!hasMore" class="infinite-status">已加载全部</div>
+    </div>
   </div>
 </template>
 
