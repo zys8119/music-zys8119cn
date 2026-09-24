@@ -42,4 +42,7 @@ export default defineConfig({
       dts: "src/components.d.ts",
     }),
   ],
+  server: {
+    allowedHosts: true,
+  },
 });
