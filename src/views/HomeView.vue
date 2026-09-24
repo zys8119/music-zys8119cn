@@ -1,11 +1,36 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { NIcon } from 'naive-ui'
 import { PlayCircleOutline, HeartOutline, SearchOutline } from '@vicons/ionicons5'
 import { musicApi } from '../services/api'
+import type { Song as PlayerSong } from '../types/index'
 
 const router = useRouter()
+
+// 添加歌曲到播放列表并播放（全局方法）
+const addSongsToPlaylist = inject<(songs: PlayerSong[]) => void>('addSongsToPlaylist', () => { })
+
+// 根据 URL 判断内容类型（用于跳转到对应的分类详情页）
+function detectTypeFromUrl(url: string): string {
+  if (url.includes('/singer/')) return 'singer'
+  if (url.includes('/playlist/')) return 'playlist'
+  if (url.includes('/radio/')) return 'radio'
+  if (url.includes('/list/')) return 'rank'
+  if (url.includes('/mv')) return 'mv'
+  if (url.includes('/mp3/')) return 'song'
+  return 'list'
+}
+
+// 跳转到分类详情页（复用分类路由，携带目标站点 URL 与类型）
+function goToCategory(url: string, name: string, type?: string) {
+  if (!url) return
+  router.push({
+    name: 'category',
+    params: { id: '-1' },
+    query: { url, name, type: type || detectTypeFromUrl(url) },
+  })
+}
 
 // 定义歌手类型
 interface Artist {
@@ -290,48 +315,54 @@ onMounted(() => {
   fetchRisingSongs()
 })
 
-// 处理歌手点击
+// 处理歌手点击：跳转到对应歌手详情页（内容为歌曲列表）
 const handleArtistClick = (artist: Artist) => {
-  console.log('点击歌手:', artist.name)
-  // 这里可以添加跳转到歌手详情页的逻辑
-  if (artist.url) {
-    // 可以根据url进行页面跳转或其他操作
-    console.log('歌手链接:', artist.url)
-  }
+  goToCategory(artist.url, artist.name, 'list')
 }
 
-// 处理歌曲点击
+// 歌曲 id 偏移：避免与其它视图的索引 id 冲突（与各视图偏移约定保持一致）
+const RISING_ID_BASE = 7000
+const POPULAR_ID_BASE = 8000
+
+// 处理歌曲点击：播放对应歌曲
 const handleSongClick = (song: Song) => {
-  console.log('播放歌曲:', song.music)
-  console.log('歌手:', song.singer)
-  console.log('播放时间:', song.time)
-  console.log('歌曲时长(秒):', song.playTime)
-  // 这里可以添加播放歌曲的逻辑
-  if (song.url) {
-    console.log('歌曲链接:', song.url)
-    // 可以跳转到歌曲详情页或开始播放
-  }
+  if (!song.url) return
+  addSongsToPlaylist([
+    {
+      id: POPULAR_ID_BASE + popularSongs.value.indexOf(song),
+      title: song.music,
+      artist: song.singer,
+      album: '',
+      category: -6,
+      cover: song.img,
+      url: song.url,
+    },
+  ])
 }
 
-// 处理歌单点击
+// 处理歌单点击：跳转到对应歌单详情页（内容为歌曲列表）
 const handlePlaylistClick = (playlist: Playlist) => {
-  console.log('打开歌单:', playlist.name)
-  // 这里可以添加跳转到歌单详情页的逻辑
-  if (playlist.url) {
-    console.log('歌单链接:', playlist.url)
-    // 可以跳转到歌单详情页
-  }
+  goToCategory(playlist.url, playlist.name, 'list')
 }
 
-// 处理飙升榜歌曲点击
+// 处理飙升榜歌曲点击：播放对应歌曲
 const handleRisingSongClick = (song: RisingSong) => {
-  console.log('播放飙升榜歌曲:', song.name)
-  console.log('排名:', song.rank)
-  // 这里可以添加播放歌曲的逻辑
-  if (song.url) {
-    console.log('歌曲链接:', song.url)
-    // 可以跳转到歌曲详情页或开始播放
-  }
+  if (!song.url) return
+  // 飙升榜条目形如“歌手《歌名》”，拆分出歌名与歌手
+  const match = song.name.match(/^(.*?)[《【](.*?)[》】]/)
+  const artist = match ? match[1].trim() : ''
+  const title = match ? match[2].trim() : song.name
+  addSongsToPlaylist([
+    {
+      id: RISING_ID_BASE + song.rank,
+      title,
+      artist,
+      album: '',
+      category: -6,
+      cover: '',
+      url: song.url,
+    },
+  ])
 }
 
 // 处理功能卡片点击
