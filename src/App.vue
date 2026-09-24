@@ -24,6 +24,9 @@ const naiveTheme = computed(() => (isDark.value ? darkTheme : null))
 const router = useRouter()
 const route = useRoute()
 
+// 内容区滚动容器：切换页面时回到顶部
+const contentEl = ref<HTMLElement | null>(null)
+
 // 响应式数据
 const currentSong = ref<Song | null>(null)
 const isPlaying = ref(false)
@@ -433,6 +436,31 @@ function handleKeydown(event: KeyboardEvent) {
   }
 }
 
+// 切换页面（路由变化）时，内容区回到顶部
+watch(
+  () => route.fullPath,
+  async () => {
+    await nextTick()
+    // n-layout-content 暴露了 scrollTo 方法，其内部会滚动真正的滚动容器
+    // （.n-layout-scroll-container），直接设置 scrollTop 无效。
+    type LayoutContentExposed = { scrollTo?: (options: ScrollToOptions) => void }
+    const inst = contentEl.value as unknown as LayoutContentExposed | null
+    if (inst && typeof inst.scrollTo === 'function') {
+      inst.scrollTo({ top: 0, behavior: 'auto' })
+      return
+    }
+    // 兜底：直接复位内部滚动容器
+    const root = contentEl.value as unknown as HTMLElement | { $el?: HTMLElement } | null
+    const el =
+      root && typeof (root as HTMLElement).querySelector === 'function'
+        ? (root as HTMLElement)
+        : (root as { $el?: HTMLElement } | null)?.$el
+    const inner = el?.querySelector('.n-layout-scroll-container') as HTMLElement | null
+    if (inner) inner.scrollTop = 0
+  },
+  { immediate: true }
+)
+
 // 组件挂载时添加键盘事件监听器
 onMounted(() => {
   document.addEventListener('keydown', handleKeydown)
@@ -535,7 +563,7 @@ provide('downloadSong', downloadSong)
             :current-category="currentCategory" @play-song="handleSidebarPlaySong"
             @change-category="handleSidebarCategoryChange" @remove-songs="removeSongs"
             @clear-playlist="clearPlaylist" />
-          <n-layout-content class="app-content overflow-y-auto p-6 pt-22 pb-24 scrollbar-hide">
+          <n-layout-content ref="contentEl" class="app-content overflow-y-auto p-6 pt-22 pb-24 scrollbar-hide">
             <HotRankings />
             <router-view />
           </n-layout-content>
