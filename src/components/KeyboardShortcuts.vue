@@ -40,9 +40,9 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- 快捷键帮助按钮（全屏播放时隐藏） -->
-  <n-button v-if="!fullscreenOpen" quaternary circle size="small" @click="toggleShortcuts"
-    class="fixed top-4 right-4 z-1000" title="键盘快捷键帮助 (按 ? 键)">
+  <!-- 快捷键帮助按钮（全屏播放时隐藏，置于顶栏下方避免遮挡导航按钮） -->
+  <n-button v-if="!fullscreenOpen" quaternary circle size="small" @click="toggleShortcuts" class="shortcuts-btn"
+    title="键盘快捷键帮助 (按 ? 键)">
     <template #icon>
       <n-icon size="16">
         <svg viewBox="0 0 24 24">
@@ -157,5 +157,32 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* UnoCSS classes are used in template, no custom styles needed */
+/* 快捷键帮助按钮：固定在顶栏下方右侧，避免遮挡顶栏导航按钮 */
+.shortcuts-btn {
+  position: fixed;
+  top: calc(var(--app-header-h, 64px) + 12px);
+  right: 16px;
+  z-index: 90;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  box-shadow: 0 4px 14px rgba(31, 45, 61, 0.1);
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.shortcuts-btn:hover {
+  color: #1890ff;
+  border-color: rgba(24, 144, 255, 0.4);
+  background: var(--app-active-bg);
+}
+
+.shortcuts-btn:focus-visible {
+  outline: 2px solid #1890ff;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shortcuts-btn {
+    transition: none;
+  }
+}
 </style>
