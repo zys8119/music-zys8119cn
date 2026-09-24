@@ -102,8 +102,12 @@ const listEl = ref<HTMLElement | null>(null)
 const listHeight = ref(0)
 
 function updateListHeight() {
-  const el = listEl.value
-  if (!el) return
+  // listEl 绑定在 <n-list> 组件上，拿到的是组件实例，需取其根 DOM 节点
+  const raw = listEl.value as unknown as HTMLElement | { $el?: HTMLElement } | null
+  const el = raw && typeof (raw as HTMLElement).getBoundingClientRect !== 'function'
+    ? (raw as { $el?: HTMLElement }).$el
+    : (raw as HTMLElement | null)
+  if (!el || typeof el.getBoundingClientRect !== 'function') return
   const top = el.getBoundingClientRect().top
   // 底部留白：播放条可见时避开播放条，否则仅留少量间距
   const bottomOffset = props.currentSong && playerVisible.value ? 88 : 16

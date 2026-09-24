@@ -205,10 +205,13 @@ onBeforeUnmount(() => {
 
         <!-- 触发按钮 -->
         <button class="lyrics-trigger" type="button" :aria-label="isOpen ? '收起歌词' : '展开歌词'" @click="toggle">
-            <n-icon size="18">
+            <span class="lyrics-trigger__now" :class="{ 'lyrics-trigger__now--empty': !activeLineText }">
+                <template v-if="activeLineText">{{ activeLineText }}</template>
+                <template v-else>歌词</template>
+            </span>
+            <n-icon size="18" class="lyrics-trigger__icon">
                 <component :is="isOpen ? CloseOutline : MusicalNotesOutline" />
             </n-icon>
-            <span>歌词</span>
         </button>
     </div>
 </template>
@@ -234,7 +237,8 @@ onBeforeUnmount(() => {
 .lyrics-trigger {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
+    max-width: min(320px, calc(100vw - 32px));
     padding: 8px 14px;
     border: 1px solid var(--app-border);
     border-radius: 999px;
@@ -247,13 +251,43 @@ onBeforeUnmount(() => {
     cursor: pointer;
     box-shadow: 0 4px 14px rgba(31, 45, 61, 0.1);
     transition: color 0.2s ease, background-color 0.3s ease, transform 0.2s ease,
-        border-color 0.3s ease;
+        border-color 0.3s ease, box-shadow 0.2s ease;
+}
+
+/* 实时展示的当前激活歌词 */
+.lyrics-trigger__now {
+    min-width: 0;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #1890ff;
+    font-weight: 600;
+    transition: color 0.25s ease, opacity 0.25s ease;
+}
+
+/* 暂无歌词时回退为普通标签样式 */
+.lyrics-trigger__now--empty {
+    color: var(--app-text);
+    font-weight: 500;
+}
+
+.lyrics-trigger__icon {
+    flex-shrink: 0;
+    color: var(--app-muted);
+    transition: color 0.2s ease;
 }
 
 .lyrics-trigger:hover {
     color: #1890ff;
     background: var(--app-active-bg);
+    border-color: rgba(24, 144, 255, 0.35);
+    box-shadow: 0 6px 18px rgba(24, 144, 255, 0.18);
     transform: translateY(-1px);
+}
+
+.lyrics-trigger:hover .lyrics-trigger__icon {
+    color: #1890ff;
 }
 
 .lyrics-trigger:focus-visible {
