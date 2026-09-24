@@ -22,6 +22,8 @@ const seekTo = inject<(t: number) => void>('seekTo', () => { })
 
 const isOpen = ref(false)
 const listEl = ref<HTMLElement | null>(null)
+// 面板根元素（用于拖动定位）
+const panelEl = ref<HTMLElement | null>(null)
 
 // 用户手动滚动/拖拽时暂停自动滚动，避免冲突
 const userScrollLock = ref(false)
@@ -161,10 +163,14 @@ watch(activeIndex, async (idx) => {
     scrollToLine(idx)
 })
 
-// 展开面板时定位到当前行
+// 展开面板时定位到当前行，并计算展开方向
 watch(isOpen, async (open) => {
-    if (!open) return
+    if (!open) {
+        bodyBelow.value = false
+        return
+    }
     await nextTick()
+    updateBodyPlacement()
     if (activeIndex.value >= 0) scrollToLine(activeIndex.value)
 })
 
@@ -173,22 +179,118 @@ watch(currentLyric, () => {
     if (listEl.value) listEl.value.scrollTop = 0
 })
 
+// ===== 面板位置拖动 =====
+// 拖动后的自定义位置；null 表示沿用默认定位（right/bottom，随播放条联动）
+const pos = ref<{ left: number; top: number; width: number } | null>(null)
+const panelStyle = computed(() => {
+    if (!pos.value) return undefined
+    return {
+        left: `${pos.value.left}px`,
+        top: `${pos.value.top}px`,
+        width: `${pos.value.width}px`,
+        right: 'auto',
+        bottom: 'auto',
+    }
+})
+
+// 面板内容元素与展开方向：面板脱离文档流，避免撑开容器把按钮挤下去
+const bodyEl = ref<HTMLElement | null>(null)
+// 按钮上方空间不足时，面板改为在按钮下方展开
+const bodyBelow = ref(false)
+
+async function updateBodyPlacement() {
+    if (!isOpen.value) {
+        bodyBelow.value = false
+        return
+    }
+    await nextTick()
+    const panelRect = panelEl.value?.getBoundingClientRect()
+    const bodyHeight = bodyEl.value?.offsetHeight ?? 0
+    if (!panelRect) return
+    // 预留 12px 间距，上方放不下则改为向下展开
+    bodyBelow.value = panelRect.top < bodyHeight + 12
+}
+
+const isPanelDragging = ref(false)
+let panelStartX = 0
+let panelStartY = 0
+let panelStartLeft = 0
+let panelStartTop = 0
+let panelStartWidth = 0
+let panelStartHeight = 0
+// 本次拖动是否发生了位移（用于区分拖动与点击）
+let panelDragMoved = false
+
+function onPanelPointerDown(e: PointerEvent) {
+    // 仅响应鼠标左键 / 触摸
+    if (e.button !== 0) return
+    const el = panelEl.value
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    isPanelDragging.value = true
+    panelDragMoved = false
+    panelStartX = e.clientX
+    panelStartY = e.clientY
+    panelStartLeft = rect.left
+    panelStartTop = rect.top
+    panelStartWidth = rect.width
+    panelStartHeight = rect.height
+    window.addEventListener('pointermove', onPanelPointerMove)
+    window.addEventListener('pointerup', onPanelPointerUp)
+    window.addEventListener('pointercancel', onPanelPointerUp)
+}
+
+function onPanelPointerMove(e: PointerEvent) {
+    if (!isPanelDragging.value) return
+    const dx = e.clientX - panelStartX
+    const dy = e.clientY - panelStartY
+    // 超过阈值才视为拖动，避免轻微抖动误触发
+    if (!panelDragMoved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return
+    panelDragMoved = true
+    // 限制在视口内，避免拖出屏幕
+    const left = Math.min(Math.max(panelStartLeft + dx, 0), Math.max(0, window.innerWidth - panelStartWidth))
+    const top = Math.min(Math.max(panelStartTop + dy, 0), Math.max(0, window.innerHeight - panelStartHeight))
+    pos.value = { left, top, width: panelStartWidth }
+    e.preventDefault()
+}
+
+function onPanelPointerUp() {
+    isPanelDragging.value = false
+    window.removeEventListener('pointermove', onPanelPointerMove)
+    window.removeEventListener('pointerup', onPanelPointerUp)
+    window.removeEventListener('pointercancel', onPanelPointerUp)
+    // 拖动结束后按新位置重新判断展开方向
+    updateBodyPlacement()
+    // 下一帧再重置，避免拖动结束后的 click 触发展开/收起
+    setTimeout(() => {
+        panelDragMoved = false
+    }, 0)
+}
+
 function toggle() {
+    // 拖动后不触发展开/收起
+    if (panelDragMoved) return
     isOpen.value = !isOpen.value
 }
 
 onBeforeUnmount(() => {
     window.removeEventListener('mousemove', onDragMove)
     window.removeEventListener('mouseup', onDragEnd)
+    window.removeEventListener('pointermove', onPanelPointerMove)
+    window.removeEventListener('pointerup', onPanelPointerUp)
+    window.removeEventListener('pointercancel', onPanelPointerUp)
     if (scrollIdleTimer !== null) clearTimeout(scrollIdleTimer)
 })
 </script>
 
 <template>
-    <div class="lyrics-panel" :class="{ 'lyrics-panel--shifted': !playerVisible && currentSong }">
-        <!-- 歌词面板 -->
-        <div v-show="isOpen" class="lyrics-body">
-            <div class="lyrics-header">
+    <div ref="panelEl" class="lyrics-panel"
+        :class="{ 'lyrics-panel--shifted': !pos && !playerVisible && currentSong, 'lyrics-panel--dragging': isPanelDragging, 'lyrics-panel--below': bodyBelow }"
+        :style="panelStyle">
+        <!-- 歌词面板：绝对定位，避免撑开容器把触发按钮挤走 -->
+        <div v-show="isOpen" ref="bodyEl" class="lyrics-body">
+            <!-- 面板头部：同样支持拖动移动面板 -->
+            <div class="lyrics-header" @pointerdown="onPanelPointerDown">
                 <div class="lyrics-title">{{ currentSong?.title || '暂无歌曲' }}</div>
                 <div class="lyrics-artist">{{ currentSong?.artist }}</div>
             </div>
@@ -204,7 +306,8 @@ onBeforeUnmount(() => {
         </div>
 
         <!-- 触发按钮 -->
-        <button class="lyrics-trigger" type="button" :aria-label="isOpen ? '收起歌词' : '展开歌词'" @click="toggle">
+        <button class="lyrics-trigger" type="button" :aria-label="isOpen ? '收起歌词' : '展开歌词'"
+            @pointerdown="onPanelPointerDown" @click="toggle">
             <span class="lyrics-trigger__now" :class="{ 'lyrics-trigger__now--empty': !activeLineText }">
                 <template v-if="activeLineText">{{ activeLineText }}</template>
                 <template v-else>歌词</template>
@@ -229,6 +332,16 @@ onBeforeUnmount(() => {
     transition: bottom 0.24s ease;
 }
 
+/* 拖动中：禁用过渡并提升层级，避免拖拽卡顿与被遮挡 */
+.lyrics-panel--dragging {
+    z-index: 1000;
+    transition: none;
+}
+
+.lyrics-panel--dragging .lyrics-trigger {
+    cursor: grabbing;
+}
+
 /* 播放条隐藏时分页上移，歌词面板同步上移 */
 .lyrics-panel--shifted {
     bottom: 105px;
@@ -248,7 +361,9 @@ onBeforeUnmount(() => {
     color: var(--app-text);
     font-size: 13px;
     font-weight: 500;
-    cursor: pointer;
+    /* 允许在按钮上拖动面板，同时保留点击切换 */
+    cursor: grab;
+    touch-action: none;
     box-shadow: 0 4px 14px rgba(31, 45, 61, 0.1);
     transition: color 0.2s ease, background-color 0.3s ease, transform 0.2s ease,
         border-color 0.3s ease, box-shadow 0.2s ease;
@@ -296,6 +411,10 @@ onBeforeUnmount(() => {
 }
 
 .lyrics-body {
+    /* 绝对定位：面板不参与容器布局，避免把触发按钮挤走 */
+    position: absolute;
+    right: 0;
+    bottom: 100%;
     width: min(360px, calc(100vw - 32px));
     max-height: 60vh;
     margin-bottom: 10px;
@@ -311,11 +430,24 @@ onBeforeUnmount(() => {
     transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
+/* 面板头部：同样支持拖动移动面板 */
 .lyrics-header {
     flex-shrink: 0;
     margin-bottom: 12px;
     padding-bottom: 10px;
     border-bottom: 1px solid var(--app-border);
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+
+/* 上方空间不足时，面板改为在按钮下方展开 */
+.lyrics-panel--below .lyrics-body {
+    bottom: auto;
+    top: 100%;
+    margin-bottom: 0;
+    margin-top: 10px;
 }
 
 .lyrics-title {
