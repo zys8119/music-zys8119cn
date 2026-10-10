@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, watch, inject, type Ref } from 'vue'
+import { ref, computed, watch, inject, onMounted, onBeforeUnmount, type Ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NList, NListItem, NThing, NEmpty, NCard } from 'naive-ui'
+import { NList, NListItem, NThing, NEmpty, NCard, NCheckbox, NButton } from 'naive-ui'
 import { SearchOutline, PlayCircleOutline, CloseOutline } from '@vicons/ionicons5'
 import { NIcon } from 'naive-ui'
 import { musicApi } from '../services/api'
@@ -163,9 +163,9 @@ const { sentinelEl } = useInfiniteScroll({
   onLoadMore: loadMore,
 })
 
-// 播放搜索结果中的歌曲
-function handleItemClick(item: ListItem, index: number) {
-  const song: Song = {
+// 将列表项转换为可播放歌曲
+function toSong(item: ListItem, index: number): Song {
+  return {
     id: index + 5000,
     title: item.name,
     artist: keyword.value,
@@ -173,7 +173,83 @@ function handleItemClick(item: ListItem, index: number) {
     url: item.url,
     category: -2,
   }
-  addSongsToPlaylist([song])
+}
+
+// 播放搜索结果中的歌曲
+function handleItemClick(item: ListItem, index: number) {
+  addSongsToPlaylist([toSong(item, index)])
+}
+
+// ===== 多选 / 全选 =====
+// 已选中的行索引
+const selectedIndexes = ref<Set<number>>(new Set())
+
+const isAllSelected = computed(() =>
+  listItems.value.length > 0 && selectedIndexes.value.size === listItems.value.length
+)
+
+const isIndeterminate = computed(() =>
+  selectedIndexes.value.size > 0 && selectedIndexes.value.size < listItems.value.length
+)
+
+// 行是否被选中
+function isSelected(index: number): boolean {
+  return selectedIndexes.value.has(index)
+}
+
+// 切换单行选中状态
+function toggleSelect(index: number, event: Event) {
+  event.stopPropagation()
+  const next = new Set(selectedIndexes.value)
+  if (next.has(index)) next.delete(index)
+  else next.add(index)
+  selectedIndexes.value = next
+}
+
+// 全选 / 取消全选
+function toggleSelectAll() {
+  if (isAllSelected.value) {
+    selectedIndexes.value = new Set()
+  } else {
+    selectedIndexes.value = new Set(listItems.value.map((_, i) => i))
+  }
+}
+
+// 播放选中的歌曲（按列表顺序）
+function playSelected() {
+  if (selectedIndexes.value.size === 0) return
+  const songs = listItems.value
+    .map((item, index) => ({ item, index }))
+    .filter(({ index }) => selectedIndexes.value.has(index))
+    .map(({ item, index }) => toSong(item, index))
+  addSongsToPlaylist(songs)
+  selectedIndexes.value = new Set()
+}
+
+// 播放当前页全部歌曲（无选中时先全选再播放）
+function playAllCurrentPage() {
+  if (listItems.value.length === 0) return
+  if (selectedIndexes.value.size === 0) {
+    selectedIndexes.value = new Set(listItems.value.map((_, i) => i))
+  }
+  playSelected()
+}
+
+// ===== 快捷键：全选 / 播放 =====
+function handleKeydown(event: KeyboardEvent) {
+  const target = event.target as HTMLElement
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
+  if (event.ctrlKey || event.metaKey || event.altKey) return
+
+  if (event.code === 'KeyA') {
+    // A：全选 / 取消全选
+    event.preventDefault()
+    toggleSelectAll()
+  } else if (event.code === 'KeyP') {
+    // P：播放选中（无选中则全选并播放）
+    event.preventDefault()
+    playAllCurrentPage()
+  }
 }
 
 // 分页跳转：使用路由 query，保持可分享/可前进后退
@@ -186,9 +262,22 @@ function handlePageClick(link: PageLink, event: Event) {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
+// 列表数据变化时清空选中（切换关键词/分页/追加加载）
+watch(listItems, () => {
+  selectedIndexes.value = new Set()
+})
+
 watch([keyword, page], () => {
   loadSearch()
 }, { immediate: true })
+
+onMounted(() => {
+  document.addEventListener('keydown', handleKeydown)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleKeydown)
+})
 </script>
 
 <template>
@@ -243,25 +332,46 @@ watch([keyword, page], () => {
         </n-empty>
       </n-card>
 
-      <n-list v-else hoverable clickable class="song-list">
-        <n-list-item v-for="(item, index) in listItems" :key="item.url" @click="handleItemClick(item, index)">
-          <n-thing>
-            <template #avatar>
-              <div class="hot-song-avatar">
-                <n-icon size="22">
-                  <PlayCircleOutline />
-                </n-icon>
-              </div>
+      <div v-else>
+        <div class="list-toolbar">
+          <n-checkbox :checked="isAllSelected" :indeterminate="isIndeterminate" @update:checked="toggleSelectAll">
+            全选
+          </n-checkbox>
+          <n-button type="primary" size="small" :disabled="selectedIndexes.size === 0" @click="playSelected">
+            <template #icon>
+              <n-icon>
+                <PlayCircleOutline />
+              </n-icon>
             </template>
-            <template #header>
-              <span class="song-title">{{ item.name }}</span>
+            播放选中
+          </n-button>
+          <span v-if="selectedIndexes.size > 0" class="toolbar-count">已选 {{ selectedIndexes.size }} 首</span>
+        </div>
+
+        <n-list hoverable clickable class="song-list">
+          <n-list-item v-for="(item, index) in listItems" :key="item.url"
+            :class="{ 'list-item--selected': isSelected(index) }" @click="handleItemClick(item, index)">
+            <template #prefix>
+              <n-checkbox :checked="isSelected(index)" @click.stop="toggleSelect(index, $event)" />
             </template>
-            <template #description>
-              <span class="song-url">{{ item.url }}</span>
-            </template>
-          </n-thing>
-        </n-list-item>
-      </n-list>
+            <n-thing>
+              <template #avatar>
+                <div class="hot-song-avatar">
+                  <n-icon size="22">
+                    <PlayCircleOutline />
+                  </n-icon>
+                </div>
+              </template>
+              <template #header>
+                <span class="song-title">{{ item.name }}</span>
+              </template>
+              <template #description>
+                <span class="song-url">{{ item.url }}</span>
+              </template>
+            </n-thing>
+          </n-list-item>
+        </n-list>
+      </div>
 
       <!-- 分页：桌面端显示固定页码；移动端改用上拉加载更多 -->
       <nav v-if="!isMobile && !isLoading && listItems.length > 0 && pagination.items.length > 0" class="page"
@@ -418,6 +528,38 @@ watch([keyword, page], () => {
   justify-content: center;
   align-items: center;
   border-radius: 14px;
+}
+
+/* 列表工具栏（全选 + 播放选中） */
+.list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  box-shadow: 0 2px 10px rgba(31, 45, 61, 0.04);
+}
+
+.toolbar-count {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #1890ff;
+}
+
+/* 选中行高亮 */
+.song-list :deep(.n-list-item.list-item--selected) {
+  background: linear-gradient(90deg, #eef6ff, #f6efff);
+  box-shadow: inset 0 0 0 1px rgba(24, 144, 255, 0.25);
+}
+
+/* 暗色模式：选中行使用深色底，避免浅色渐变刺眼 */
+html.dark .song-list :deep(.n-list-item.list-item--selected) {
+  background: linear-gradient(90deg, rgba(24, 144, 255, 0.2), rgba(114, 46, 209, 0.2));
+  box-shadow: inset 0 0 0 1px rgba(77, 171, 255, 0.4);
 }
 
 .song-list :deep(.n-list-item) {
