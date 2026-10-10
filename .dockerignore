@@ -1,0 +1,9 @@
+node_modules
+.git
+dist
+*.log
+.agents/
+.pnpm-lock.yaml
+.pnpm-store/
+.pnpm-tmp/
+data/
