@@ -8,8 +8,23 @@ import {
   Library,
   Cafe,
   Leaf,
-  MenuOutline
+  MenuOutline,
+  GlobeOutline
 } from '@vicons/ionicons5'
+import { Capacitor } from '@capacitor/core'
+import { Browser } from '@capacitor/browser'
+
+// 原始音乐站点地址
+const SOURCE_SITE_URL = 'https://www.22a5.com/'
+
+// 打开原始网页：安卓环境用 App 内浏览器打开，浏览器环境打开新标签页
+const openSourceSite = async (): Promise<void> => {
+  if (Capacitor.isNativePlatform()) {
+    await Browser.open({ url: SOURCE_SITE_URL })
+  } else {
+    window.open(SOURCE_SITE_URL, '_blank', 'noopener,noreferrer')
+  }
+}
 
 interface Category {
   id: number;
@@ -118,6 +133,13 @@ const getCategoryIcon = (category: Category) => {
       </div>
       <div class="user-actions">
         <n-space align="center">
+          <n-button quaternary circle aria-label="打开原始网页" title="打开原始网页" @click="openSourceSite">
+            <template #icon>
+              <n-icon>
+                <GlobeOutline />
+              </n-icon>
+            </template>
+          </n-button>
           <ThemeToggle />
           <n-button quaternary circle>
             <template #icon>
@@ -351,8 +373,8 @@ const getCategoryIcon = (category: Category) => {
     min-width: 0;
   }
 
-  /* 移动端仅保留主题切换，隐藏其余图标按钮 */
-  .user-actions :deep(.n-space)>*:not(:first-child) {
+  /* 移动端仅保留「打开原始网页」与主题切换，隐藏其余图标按钮 */
+  .user-actions :deep(.n-space)>*:nth-child(n+3) {
     display: none;
   }
 

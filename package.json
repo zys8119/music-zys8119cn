@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",
+    "@capacitor/browser": "^8.0.5",
     "@capacitor/core": "^8.5.3",
     "@vicons/ionicons5": "^0.13.0",
     "axios": "^1.11.0",
@@ -27,6 +28,7 @@
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.5.3",
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.2",
@@ -34,6 +36,7 @@
     "@vue/runtime-core": "^3.5.18",
     "@vue/tsconfig": "^0.7.0",
     "less": "^4.4.0",
+    "sharp": "^0.35.5",
     "tsx": "^4.23.15",
     "typescript": "^5.9.2",
     "unocss": "^66.4.2",
