@@ -18,6 +18,8 @@ import {
   Heart,
   HeartOutline,
   ListOutline,
+  ExpandOutline,
+  ContractOutline,
 } from '@vicons/ionicons5'
 import { musicApi } from '../services/api'
 import { useResponsive } from '../composables/useResponsive'
@@ -182,6 +184,17 @@ async function toggleFavorite() {
 watch(favoriteKey, () => {
   refreshFavoriteState()
 }, { immediate: true })
+
+// 歌词全屏模式：隐藏唱片与歌曲信息，让歌词铺满舞台
+const lyricsFullscreen = ref(false)
+
+function toggleLyricsFullscreen() {
+  lyricsFullscreen.value = !lyricsFullscreen.value
+  // 切换后重新居中当前歌词行
+  nextTick(() => {
+    if (activeLyricIndex.value >= 0) scrollToLyric(activeLyricIndex.value)
+  })
+}
 
 function close() {
   fullscreenOpen.value = false
@@ -423,6 +436,13 @@ onBeforeUnmount(() => {
           <span>正在播放</span>
         </div>
         <div class="fp-header__actions">
+          <!-- 歌词全屏 / 恢复唱片 -->
+          <button class="fp-close" type="button" :aria-label="lyricsFullscreen ? '恢复唱片显示' : '歌词全屏显示'"
+            :title="lyricsFullscreen ? '恢复唱片显示' : '歌词全屏显示'" @click="toggleLyricsFullscreen">
+            <n-icon size="22">
+              <component :is="lyricsFullscreen ? ContractOutline : ExpandOutline" />
+            </n-icon>
+          </button>
           <!-- 移动端：展开/收起播放列表 -->
           <button v-if="isMobile" class="fp-close" type="button" :aria-label="playlistOpen ? '收起播放列表' : '展开播放列表'"
             :aria-expanded="playlistOpen" @click="playlistOpen = !playlistOpen">
@@ -468,8 +488,9 @@ onBeforeUnmount(() => {
         </aside>
 
         <!-- 右侧：唱片 + 歌曲信息 -->
-        <section class="fp-stage">
-          <div class="fp-vinyl" :class="{ 'fp-vinyl--playing': isPlaying }">
+        <section class="fp-stage" :class="{ 'fp-stage--lyrics-full': lyricsFullscreen }">
+          <div class="fp-vinyl" :class="{ 'fp-vinyl--playing': isPlaying }"
+            :title="lyricsFullscreen ? '点击恢复唱片' : '点击全屏查看歌词'" @click="toggleLyricsFullscreen">
             <div class="fp-vinyl__disc">
               <img :src="vinylCover" :alt="currentSong?.title || '默认唱片'" class="fp-vinyl__cover" />
               <span class="fp-vinyl__hole"></span>
@@ -477,7 +498,7 @@ onBeforeUnmount(() => {
             <div class="fp-vinyl__glow"></div>
           </div>
 
-          <div class="fp-info">
+          <div class="fp-info" :title="lyricsFullscreen ? '点击恢复唱片' : '点击全屏查看歌词'" @click="toggleLyricsFullscreen">
             <h1 class="fp-info__title">{{ currentSong?.title || '暂无歌曲' }}</h1>
             <p class="fp-info__artist">{{ currentSong?.artist }}</p>
           </div>
@@ -767,6 +788,18 @@ onBeforeUnmount(() => {
   display: grid;
   place-items: center;
   flex-shrink: 0;
+  cursor: pointer;
+}
+
+/* 歌词全屏模式：隐藏唱片与歌曲信息，歌词铺满舞台 */
+.fp-stage--lyrics-full .fp-vinyl,
+.fp-stage--lyrics-full .fp-info {
+  display: none;
+}
+
+.fp-stage--lyrics-full .fp-lyrics {
+  width: 100%;
+  flex: 1;
 }
 
 .fp-vinyl__disc {
