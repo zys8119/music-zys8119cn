@@ -8,9 +8,13 @@
     "dev": "vite --host & tsx watch server/main.ts",
     "build": "vite build",
     "preview": "vite preview",
+    "android:sync": "vite build && cap sync android",
+    "android:open": "cap open android",
     "deploys": "echo '====部署到服务器(备注:请在.env文件中配置serve_host_ip、serve_user、serve_dir)====' && sh ./deploy.sh"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
     "@vicons/ionicons5": "^0.13.0",
     "axios": "^1.11.0",
     "cheerio": "^1.2.0",
@@ -22,6 +26,7 @@
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.2",
     "@vitejs/plugin-vue": "^6.0.1",
