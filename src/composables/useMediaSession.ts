@@ -1,4 +1,6 @@
 import { watch, type Ref } from "vue";
+import { Capacitor } from "@capacitor/core";
+import { MediaSession } from "@capgo/capacitor-media-session";
 
 interface MediaSessionSong {
   title: string;
@@ -24,25 +26,15 @@ interface UseMediaSessionOptions {
   seekBy: (delta: number) => void;
 }
 
-// 浏览器是否支持 Media Session API（蓝牙/耳机按键控制依赖该 API）
-const supported =
+// 是否运行在安卓原生环境
+const isNative = Capacitor.isNativePlatform();
+
+// 浏览器是否支持 Media Session API
+const webSupported =
   typeof navigator !== "undefined" && "mediaSession" in navigator;
 
-// 安全注册 action handler：部分浏览器不支持个别 action，会抛错
-function setActionHandler(
-  action: MediaSessionAction,
-  handler: MediaSessionActionHandler | null,
-) {
-  if (!supported) return;
-  try {
-    navigator.mediaSession.setActionHandler(action, handler);
-  } catch {
-    // 忽略不支持的 action
-  }
-}
-
 // 构建封面图列表（锁屏/通知栏展示）
-function buildArtwork(song: MediaSessionSong): MediaMetadataInit["artwork"] {
+function buildArtwork(song: MediaSessionSong) {
   if (!song.cover) return [];
   return [
     { src: song.cover, sizes: "96x96", type: "image/png" },
@@ -54,71 +46,90 @@ function buildArtwork(song: MediaSessionSong): MediaMetadataInit["artwork"] {
   ];
 }
 
-// 同步播放进度到系统（支持锁屏进度条拖动）
-function syncPositionState(
-  currentTime: number,
-  duration: number,
-  isPlaying: boolean,
-) {
-  if (!supported) return;
-  // setPositionState 要求 duration > 0 且 position 合法，否则会抛错
-  if (!Number.isFinite(duration) || duration <= 0) return;
-  const position = Math.min(Math.max(currentTime, 0), duration);
-  try {
-    navigator.mediaSession.setPositionState({
-      duration,
-      playbackRate: 1,
-      position,
-    });
-  } catch {
-    // 忽略非法参数
-  }
-  // 播放状态同步，蓝牙设备据此判断是否显示播放/暂停
-  navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
-}
-
 /**
- * 接入 Media Session API：
- * 让蓝牙耳机/车载/锁屏的媒体按键（播放、暂停、上一首、下一首、快进快退）能控制本播放器。
+ * 接入 Media Session：
+ * 让蓝牙耳机/车载/锁屏的媒体按键（播放、暂停、上一首、下一首、快进快退）能控制本播放器，
+ * 并让安卓在通知中心展示播放卡片。
+ *
+ * - 安卓原生环境：使用 @capgo/capacitor-media-session 原生插件
+ *   （Capacitor WebView 不支持 Web Media Session API，必须走原生）
+ * - 浏览器环境：回退到 Web Media Session API
  */
 export function useMediaSession(options: UseMediaSessionOptions) {
-  if (!supported) return;
+  if (!isNative && !webSupported) return;
 
   // ===== 注册媒体按键回调 =====
-  setActionHandler("play", () => options.play());
-  setActionHandler("pause", () => options.pause());
-  setActionHandler("previoustrack", () => options.prev());
-  setActionHandler("nexttrack", () => options.next());
-  setActionHandler("stop", () => options.pause());
-  setActionHandler("seekbackward", (details) => {
-    // 未指定步长时默认回退 10 秒
-    options.seekBy(-(details.seekOffset || 10));
-  });
-  setActionHandler("seekforward", (details) => {
-    // 未指定步长时默认前进 10 秒
-    options.seekBy(details.seekOffset || 10);
-  });
-  setActionHandler("seekto", (details) => {
-    if (typeof details.seekTime === "number") {
-      options.seekTo(details.seekTime);
+  function registerHandlers() {
+    if (isNative) {
+      // 原生插件：逐个注册 action 与回调
+      MediaSession.setActionHandler({ action: "play" }, () => options.play()).catch(() => { });
+      MediaSession.setActionHandler({ action: "pause" }, () => options.pause()).catch(() => { });
+      MediaSession.setActionHandler({ action: "previoustrack" }, () => options.prev()).catch(() => { });
+      MediaSession.setActionHandler({ action: "nexttrack" }, () => options.next()).catch(() => { });
+      MediaSession.setActionHandler({ action: "stop" }, () => options.pause()).catch(() => { });
+      MediaSession.setActionHandler({ action: "seekbackward" }, (details) =>
+        options.seekBy(-(details.seekTime || 10)),
+      ).catch(() => { });
+      MediaSession.setActionHandler({ action: "seekforward" }, (details) =>
+        options.seekBy(details.seekTime || 10),
+      ).catch(() => { });
+      MediaSession.setActionHandler({ action: "seekto" }, (details) => {
+        if (typeof details.seekTime === "number") options.seekTo(details.seekTime);
+      }).catch(() => { });
+      return;
     }
-  });
+    // 浏览器：Web Media Session，部分 action 不支持会抛错，逐个 try
+    const ms = navigator.mediaSession;
+    const set = (action: MediaSessionAction, handler: MediaSessionActionHandler | null) => {
+      try {
+        ms.setActionHandler(action, handler);
+      } catch {
+        // 忽略不支持的 action
+      }
+    };
+    set("play", () => options.play());
+    set("pause", () => options.pause());
+    set("previoustrack", () => options.prev());
+    set("nexttrack", () => options.next());
+    set("stop", () => options.pause());
+    set("seekbackward", (details) => options.seekBy(-(details.seekOffset || 10)));
+    set("seekforward", (details) => options.seekBy(details.seekOffset || 10));
+    set("seekto", (details) => {
+      if (typeof details.seekTime === "number") options.seekTo(details.seekTime);
+    });
+  }
+
+  registerHandlers();
 
   // ===== 元数据：歌曲标题/歌手/专辑/封面 =====
   watch(
     options.currentSong,
     (song) => {
       if (!song) {
-        navigator.mediaSession.metadata = null;
-        navigator.mediaSession.playbackState = "none";
+        if (isNative) {
+          MediaSession.setPlaybackState({ playbackState: "none" }).catch(() => { });
+        } else {
+          navigator.mediaSession.metadata = null;
+          navigator.mediaSession.playbackState = "none";
+        }
         return;
       }
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: song.title,
-        artist: song.artist,
-        album: song.album || "",
-        artwork: buildArtwork(song),
-      });
+      const artwork = buildArtwork(song);
+      if (isNative) {
+        MediaSession.setMetadata({
+          title: song.title,
+          artist: song.artist,
+          album: song.album || "",
+          artwork,
+        }).catch(() => { });
+      } else {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: song.title,
+          artist: song.artist,
+          album: song.album || "",
+          artwork,
+        });
+      }
     },
     { immediate: true },
   );
@@ -127,7 +138,13 @@ export function useMediaSession(options: UseMediaSessionOptions) {
   watch(
     options.isPlaying,
     (playing) => {
-      navigator.mediaSession.playbackState = playing ? "playing" : "paused";
+      if (isNative) {
+        MediaSession.setPlaybackState({
+          playbackState: playing ? "playing" : "paused",
+        }).catch(() => { });
+      } else {
+        navigator.mediaSession.playbackState = playing ? "playing" : "paused";
+      }
     },
     { immediate: true },
   );
@@ -137,15 +154,33 @@ export function useMediaSession(options: UseMediaSessionOptions) {
   watch([options.currentTime, options.duration, options.isPlaying], () => {
     const now = Date.now();
     // 播放状态切换需立即同步，进度更新按 1 秒节流
-    const playingChanged =
-      navigator.mediaSession.playbackState !==
+    const playingChanged = isNative
+      ? false
+      : navigator.mediaSession.playbackState !==
       (options.isPlaying.value ? "playing" : "paused");
     if (!playingChanged && now - lastSync < 1000) return;
     lastSync = now;
-    syncPositionState(
-      options.currentTime.value,
-      options.duration.value,
-      options.isPlaying.value,
-    );
+
+    const dur = options.duration.value;
+    // setPositionState 要求 duration > 0 且 position 合法
+    if (!Number.isFinite(dur) || dur <= 0) return;
+    const position = Math.min(Math.max(options.currentTime.value, 0), dur);
+    if (isNative) {
+      MediaSession.setPositionState({
+        duration: dur,
+        playbackRate: 1,
+        position,
+      }).catch(() => { });
+    } else {
+      try {
+        navigator.mediaSession.setPositionState({
+          duration: dur,
+          playbackRate: 1,
+          position,
+        });
+      } catch {
+        // 忽略非法参数
+      }
+    }
   });
 }

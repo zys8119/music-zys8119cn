@@ -4,3 +4,6 @@ project(':capacitor-android').projectDir = new File('../node_modules/.pnpm/@capa
 
 include ':capacitor-browser'
 project(':capacitor-browser').projectDir = new File('../node_modules/.pnpm/@capacitor+browser@8.0.5_@capacitor+core@8.5.3/node_modules/@capacitor/browser/android')
+
+include ':capgo-capacitor-media-session'
+project(':capgo-capacitor-media-session').projectDir = new File('../node_modules/.pnpm/@capgo+capacitor-media-session@8.1.1_@capacitor+core@8.5.3/node_modules/@capgo/capacitor-media-session/android')

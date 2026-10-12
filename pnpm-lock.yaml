@@ -17,6 +17,9 @@ importers:
       '@capacitor/core':
         specifier: ^8.5.3
         version: 8.5.3
+      '@capgo/capacitor-media-session':
+        specifier: ^8.1.1
+        version: 8.1.1(@capacitor/core@8.5.3)
       '@vicons/ionicons5':
         specifier: ^0.13.0
         version: 0.13.0
@@ -263,6 +266,11 @@ packages:
 
   '@capacitor/core@8.5.3':
     resolution: {integrity: sha512-oBE1oGuYE4ZzYYrulC75OuHdSsD6zLUy7d5o1tFwDLG4govGoubY15cxpiI5l0+q87Lm5p0bhbehMdzJg4aFag==}
+
+  '@capgo/capacitor-media-session@8.1.1':
+    resolution: {integrity: sha512-0OnDNgqu6ZvvEeEzpq4Z9fabc0QNi1Fn20UVAft9LttD73k3NMeG/BzsBLiHejKoOr3Y8lKMJfEYLonHzr+yyw==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
 
   '@css-render/plugin-bem@0.15.14':
     resolution: {integrity: sha512-QK513CJ7yEQxm/P3EwsI+d+ha8kSOcjGvD6SevM41neEMxdULE+18iuQK6tEChAWMOQNQPLG/Rw3Khb69r5neg==}
@@ -3253,6 +3261,10 @@ snapshots:
   '@capacitor/core@8.5.3':
     dependencies:
       tslib: 2.8.1
+
+  '@capgo/capacitor-media-session@8.1.1(@capacitor/core@8.5.3)':
+    dependencies:
+      '@capacitor/core': 8.5.3
 
   '@css-render/plugin-bem@0.15.14(css-render@0.15.14)':
     dependencies:
